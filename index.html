@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM Pax Rio Verde</title>
+  <link rel="icon" type="image/png" href="logo_pax_branco.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
+
+  <section id="authScreen" class="screen hidden">
+    <div class="auth-shell">
+      <div class="auth-card">
+        <h1>CRM Pax</h1>
+        <p>Todos logam com e-mail e senha e usam o mesmo CRM compartilhado.</p>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="login" type="button">Entrar</button>
+          <button class="tab-btn" data-tab="register" type="button">Criar conta</button>
+        </div>
+
+        <form id="loginForm" class="tab-panel active">
+          <label for="loginEmail">E-mail</label>
+          <input type="email" id="loginEmail" autocomplete="email" required />
+
+          <label for="loginPassword">Senha</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" required />
+
+          <button class="btn btn-primary" type="submit">Entrar</button>
+          <button class="btn btn-link" type="button" id="forgotPasswordBtn">Esqueci minha senha</button>
+        </form>
+
+        <form id="registerForm" class="tab-panel">
+          <label for="registerName">Nome completo</label>
+          <input type="text" id="registerName" autocomplete="name" required />
+
+          <label for="registerEmail">E-mail</label>
+          <input type="email" id="registerEmail" autocomplete="email" required />
+
+          <label for="registerPassword">Senha</label>
+          <input type="password" id="registerPassword" autocomplete="new-password" required />
+
+          <button class="btn btn-primary" type="submit">Criar conta</button>
+        </form>
+
+        <div id="resetPasswordBox" class="hidden stack reset-box">
+          <label for="newPassword">Nova senha</label>
+          <input type="password" id="newPassword" autocomplete="new-password" placeholder="Digite sua nova senha" />
+          <button class="btn btn-primary" type="button" id="updatePasswordBtn">Salvar nova senha</button>
+        </div>
+
+        <p id="authMessage" class="message"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="appScreen" class="screen hidden">
+    <div class="mobile-topbar">
+      <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Abrir menu">☰</button>
+      <div><strong id="mobileOrgName">CRM Pax</strong></div>
+    </div>
+
+    <div class="app">
+      <aside id="sidebar" class="sidebar">
+        <div class="brand">
+          <div class="brand-logo"><img src="logo_pax_branco.png" alt="Pax Rio Verde" class="brand-logo-img" /></div>
+          <div>
+            <h1 id="orgNameLabel">CRM Pax</h1>
+            <p id="userWelcome">Usuário</p>
+          </div>
+        </div>
+
+        <nav class="menu">
+          <button class="menu-item active" data-view="funil" type="button">Funil</button>
+          <button class="menu-item" data-view="leads" type="button">Leads</button>
+          <button class="menu-item" data-view="relatorios" type="button">Relatórios</button>
+          <button class="menu-item" data-view="equipe" type="button">Equipe</button>
+          <button class="menu-item" data-view="configuracoes" type="button">Configurações</button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <p><strong>Modo:</strong> CRM compartilhado</p>
+          <p><strong>Acesso:</strong> usuários autenticados</p>
+          <button id="logoutBtn" class="btn btn-ghost" type="button">Sair</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h2 id="pageTitle">Pipeline</h2>
+            <p id="pageSubtitle">Gerencie os leads do CRM compartilhado.</p>
+          </div>
+
+          <div class="topbar-actions">
+            <input type="text" id="searchInput" placeholder="Buscar cliente, contato, rede social..." />
+
+            <div class="filter-dropdown" id="ownerFilterDropdown">
+              <button type="button" class="filter-btn" id="ownerFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="filter-btn-label" id="ownerFilterLabel">Todos os responsáveis</span>
+                <span class="filter-btn-arrow">▾</span>
+              </button>
+              <div class="filter-menu hidden" id="ownerFilterMenu" role="listbox" aria-label="Filtro de responsáveis"></div>
+              <select id="ownerFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                <option value="">Todos os responsáveis</option>
+              </select>
+            </div>
+
+            <div class="filter-dropdown" id="monthFilterDropdown">
+              <button type="button" class="filter-btn" id="monthFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="filter-btn-label" id="monthFilterLabel">Todos os meses</span>
+                <span class="filter-btn-arrow">▾</span>
+              </button>
+              <div class="filter-menu hidden" id="monthFilterMenu" role="listbox" aria-label="Filtro de meses"></div>
+              <select id="monthFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                <option value="">Todos os meses</option>
+              </select>
+            </div>
+
+            <button type="button" id="importCsvBtn" class="btn btn-secondary">Importar CSV</button>
+            <button type="button" id="exportCsvBtn" class="btn btn-secondary">Exportar CSV</button>
+            <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden" />
+            <button type="button" id="deleteSelectedBtn" class="btn btn-danger hidden">Excluir selecionados</button>
+            <button type="button" id="historyBtn" class="btn btn-history">Histórico</button>
+            <button type="button" id="addLeadBtn" class="btn btn-primary">+ Novo Lead</button>
+            <button type="button" id="addStageBtn" class="btn btn-secondary">+ Pipeline</button>
+          </div>
+        </header>
+
+        <section id="view-funil" class="view active-view">
+          <section class="stats stats-extended" id="metricsSection">
+            <div class="stat-card"><span>Total de Leads</span><strong id="totalLeads">0</strong></div>
+            <div class="stat-card"><span>Receita Fechada</span><strong id="totalValue">R$ 0,00</strong></div>
+            <div class="stat-card"><span>Fechados</span><strong id="closedDeals">0</strong></div>
+            <div class="stat-card"><span>Conversão</span><strong id="conversionRate">0%</strong></div>
+            <div class="stat-card"><span>Ticket Médio</span><strong id="avgTicket">R$ 0,00</strong></div>
+            <div class="stat-card"><span>Leads pagos</span><strong id="paidRate">0</strong></div>
+            <div class="stat-card"><span>Leads orgânicos</span><strong id="organicLeads">0</strong></div>
+            <div class="stat-card"><span>Maior Pipeline</span><strong id="topStage">-</strong></div>
+          </section>
+          <div class="pipeline-board-wrap">
+            <div class="pipeline-scrollbar-native" id="pipelineScrollTop">
+            <div id="pipelineScrollTopInner"></div>
+          </div>
+          <div class="pipeline-scroll-area" id="pipelineScrollArea">
+            <section class="pipeline" id="pipeline"></section>
+          </div>
+          <div class="pipeline-scrollbar-native" id="pipelineScrollBottom">
+            <div id="pipelineScrollBottomInner"></div>
+          </div>
+          </div>
+        </section>
+
+        <section id="view-leads" class="view">
+          <div class="panel">
+            <div class="panel-header"><h3>Lista de Leads</h3></div>
+            <div class="table-wrap">
+              <table class="leads-table">
+                <thead>
+                  <tr>
+                    <th class="select-col">
+                      <input type="checkbox" id="selectAllLeads" class="lead-check" aria-label="Selecionar todos os leads visíveis" />
+                    </th>
+                    <th>Nome</th>
+                    <th>Contato</th>
+                    <th>Responsável</th>
+                    <th>Valor</th>
+                    <th>Data Início</th>
+                    <th>Rede Social</th>
+                    <th>Origem</th>
+                    <th>Plano</th>
+                    <th>Pipeline</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="leadsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-relatorios" class="view">
+          <div class="panel">
+            <div class="panel-header"><h3>Relatórios</h3></div>
+
+            <div class="report-grid report-grid-extended">
+              <div class="report-card"><span>Receita fechada</span><strong id="reportClosedValue">R$ 0,00</strong></div>
+              <div class="report-card"><span>Ticket médio fechado</span><strong id="reportAvgTicket">R$ 0,00</strong></div>
+              <div class="report-card"><span>Leads pagos</span><strong id="reportPaidCount">0</strong></div>
+              <div class="report-card"><span>Leads orgânicos</span><strong id="reportOrganicCount">0</strong></div>
+              <div class="report-card"><span>Maior responsável</span><strong id="reportTopOwner">-</strong></div>
+              <div class="report-card"><span>Melhor pipeline</span><strong id="reportTopStage">-</strong></div>
+              <div class="report-card"><span>Mês com mais leads</span><strong id="reportBestMonth">-</strong></div>
+              <div class="report-card"><span>Planos fechados</span><strong id="reportClosedPlans">0</strong></div>
+            </div>
+
+            <div class="charts-grid charts-grid-extended">
+              <div class="chart-card">
+                <h4>Leads por Pipeline</h4>
+                <canvas id="pipelineChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Origem dos Leads</h4>
+                <canvas id="trafficChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Receita por Responsável</h4>
+                <canvas id="ownerChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Evolução mensal</h4>
+                <canvas id="monthlyChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Leads por rede social</h4>
+                <canvas id="socialChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Fechamentos por plano</h4>
+                <canvas id="planCountChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Receita por plano</h4>
+                <canvas id="planRevenueChart"></canvas>
+              </div>
+            </div>
+
+            <div class="panel-header report-subheader"><h3>Resumo de planos fechados</h3></div>
+            <div class="table-wrap">
+              <table class="leads-table plan-summary-table">
+                <thead>
+                  <tr>
+                    <th>Plano</th>
+                    <th>Valor unitário</th>
+                    <th>Quantidade</th>
+                    <th>Receita</th>
+                  </tr>
+                </thead>
+                <tbody id="planSummaryBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-equipe" class="view">
+          <div class="panel">
+            <div class="panel-header"><h3>Equipe</h3></div>
+            <div id="teamList" class="team-list"></div>
+          </div>
+        </section>
+
+        <section id="view-configuracoes" class="view">
+          <div class="panel">
+            <div class="panel-header"><h3>Configurações do Pipeline</h3></div>
+            <div class="config-box">
+              <p>Todos os usuários autenticados podem editar as etapas do CRM compartilhado.</p>
+              <div id="stagesConfigList" class="stages-config-list"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Novo Lead</h3>
+        <button class="close-btn" id="closeModalBtn" type="button">&times;</button>
+      </div>
+
+      <form id="leadForm" class="lead-form">
+        <input type="hidden" id="leadId" />
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="name">Nome</label>
+            <input type="text" id="name" required />
+          </div>
+
+          <div class="form-group">
+            <label for="contact">Contato</label>
+            <input type="text" id="contact" required />
+          </div>
+
+          <div class="form-group">
+            <label for="owner">Responsável</label>
+            <input type="text" id="owner" required />
+          </div>
+
+          <div class="form-group">
+            <label for="value">Valor (R$) - opcional</label>
+            <input type="number" id="value" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group">
+            <label for="startDate">Data de início</label>
+            <input type="date" id="startDate" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stage">Pipeline</label>
+            <select id="stage" required></select>
+          </div>
+
+          <div class="form-group">
+            <label for="socialSource">Rede social de origem</label>
+            <input type="text" id="socialSource" />
+          </div>
+
+          <div class="form-group form-group-full">
+            <label>Planos</label>
+            <div class="plan-toolbar">
+              <button type="button" class="btn btn-secondary" id="addPlanBtn">Adicionar plano</button>
+            </div>
+            <div id="plansList" class="plans-list"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="trafficType">Origem do lead</label>
+            <select id="trafficType" required>
+              <option value="Organico">Orgânico</option>
+              <option value="Pago">Pago</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Observações</label>
+          <div class="observation-toolbar">
+            <button type="button" class="btn btn-secondary" id="addObservationBtn">Adicionar observação</button>
+          </div>
+          <div id="observationsList" class="observations-list"></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="stageModalOverlay">
+    <div class="modal small-modal">
+      <div class="modal-header">
+        <h3 id="stageModalTitle">Adicionar pipeline</h3>
+        <button class="close-btn" id="closeStageModalBtn" type="button">&times;</button>
+      </div>
+
+      <form id="stageForm" class="lead-form">
+        <input type="hidden" id="stageId" />
+        <div class="form-group">
+          <label for="stageName">Nome da etapa</label>
+          <input type="text" id="stageName" required />
+        </div>
+
+        <div class="form-group">
+          <label for="stageColor">Cor</label>
+          <div class="color-field">
+            <input type="color" id="stageColor" value="#1f9d55" />
+            <span id="stageColorPreview" class="color-preview-label">#1F9D55</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="stageType">Tipo</label>
+          <select id="stageType">
+            <option value="andamento">Andamento</option>
+            <option value="fechado">Fechado</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="espera">Espera</option>
+          </select>
+        </div>
+
+        <div class="form-group hidden" id="customStageTypeGroup">
+          <label for="customStageType">Tipo personalizado</label>
+          <input type="text" id="customStageType" placeholder="Ex.: pós-venda, retorno, renovação" />
+          <div class="custom-type-actions">
+            <button type="button" class="btn btn-secondary hidden" id="removeCustomTypeBtn">Remover este tipo</button>
+          </div>
+          <small class="helper-text">Você pode criar, editar ou remover um tipo personalizado para este pipeline.</small>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelStageBtn">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="saveStageBtn">Adicionar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="historyModalOverlay">
+    <div class="modal history-modal">
+      <div class="modal-header">
+        <h3>Histórico de Alterações</h3>
+        <button class="close-btn" id="closeHistoryModalBtn" type="button">&times;</button>
+      </div>
+
+      <div class="history-wrap">
+        <div class="history-toolbar">
+          <button type="button" class="btn btn-secondary" id="refreshHistoryBtn">Atualizar</button>
+        </div>
+        <pre id="historyText" class="history-text">Carregando histórico...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
