@@ -203,6 +203,31 @@
       .filter((item) => item.text);
   }
 
+  function cleanPlanList(plans) {
+    return (Array.isArray(plans) ? plans : [])
+      .map((item) => {
+        const name = String(item?.name || "").trim();
+        const rawValue = item?.value;
+
+        let value = 0;
+        if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
+          const normalized = String(rawValue)
+            .replace(/r\$\s*/gi, "")
+            .replace(/\./g, "")
+            .replace(",", ".")
+            .replace(/[^0-9.-]/g, "");
+          value = Number(normalized || 0);
+        }
+
+        return {
+          name,
+          value: Number.isFinite(value) ? value : 0
+        };
+      })
+      .filter((item) => item.name);
+  }
+
+
   function getLeadMeta(rawNotes, leadValue = 0) {
     const raw = String(rawNotes || "");
     const prefix = "__CRM_META__";
