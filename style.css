@@ -490,6 +490,10 @@ input:focus,select:focus,textarea:focus{
   font-size:13px;
 }
 
+.saved-stage-type-actions{
+  margin-top:12px;
+}
+
 .saved-stage-type{
   display:flex;
   align-items:center;
