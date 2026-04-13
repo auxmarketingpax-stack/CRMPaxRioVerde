@@ -555,10 +555,10 @@
     if (!els.savedStageTypes || !els.savedStageTypesGroup) return;
 
     const types = getCustomStageTypes();
-    els.savedStageTypesGroup.classList.toggle("hidden", types.length === 0);
+    els.savedStageTypesGroup.classList.remove("hidden");
 
     if (!types.length) {
-      els.savedStageTypes.innerHTML = "";
+      els.savedStageTypes.innerHTML = '<div class="saved-stage-types-empty">Nenhum tipo personalizado salvo ainda.</div>';
       return;
     }
 
@@ -568,7 +568,7 @@
       return `
         <div class="saved-stage-type ${active ? "active" : ""}">
           <button type="button" class="saved-stage-type-select" data-stage-type="${escapeHtml(type)}">${escapeHtml(type)}</button>
-          <button type="button" class="saved-stage-type-delete" data-stage-type-delete="${escapeHtml(type)}" aria-label="Excluir tipo ${escapeHtml(type)}">×</button>
+          <button type="button" class="saved-stage-type-delete" data-stage-type-delete="${escapeHtml(type)}" aria-label="Excluir tipo ${escapeHtml(type)}">&times;</button>
         </div>
       `;
     }).join("");
@@ -1193,8 +1193,8 @@
                 </div>
               </div>
               <div class="column-order-actions">
-                <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">←</button>
-                <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">→</button>
+                <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">&larr;</button>
+                <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">&rarr;</button>
               </div>
             </div>
             <span class="badge">${leads.length}</span>
@@ -1360,8 +1360,8 @@
         </div>
 
         <div class="stage-config-actions">
-          <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">←</button>
-          <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">→</button>
+          <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">&larr;</button>
+          <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">&rarr;</button>
           <button type="button" class="edit-btn" data-stage-action="edit" data-id="${stage.id}">Editar</button>
           <button type="button" class="delete-btn" data-stage-action="delete" data-id="${stage.id}">Excluir</button>
         </div>
