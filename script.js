@@ -173,15 +173,29 @@
   }
 
   function showScreen(id) {
+    closeAllModals();
     [els.authScreen, els.appScreen].forEach((screen) => screen.classList.add("hidden"));
     $(id).classList.remove("hidden");
     els.bootScreen.classList.add("hidden");
+  }
+
+  function closeAllModals() {
+    [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay].forEach((overlay) => {
+      overlay?.classList.add("hidden");
+    });
   }
 
   function brMoney(value) {
     return Number(value || 0).toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL"
+    });
+  }
+
+  function formatPlanValue(value) {
+    return Number(value || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
     });
   }
 
@@ -360,12 +374,7 @@
     const catalog = new Map();
 
     state.leads.forEach((lead) => {
-      const plans = getLeadPlans(lead);
-      const fallbackPlans = plans.length
-        ? plans
-        : (Number(lead?.value || 0) > 0 ? [{ name: getDefaultPlanName(0), value: Number(lead.value || 0) }] : []);
-
-      fallbackPlans.forEach((item) => {
+      getLeadPlans(lead).forEach((item) => {
         const name = String(item?.name || "").trim();
         if (!name || catalog.has(name)) return;
         catalog.set(name, Number(item?.value || 0));
@@ -380,7 +389,7 @@
   function findKnownPlan(name) {
     const normalized = String(name || "").trim().toLowerCase();
     if (!normalized) return null;
-    return getPlanCatalog().find((item) => item.name.trim().toLowerCase() === normalized) || null;
+    return getPlanCatalogWithDefault().find((item) => item.name.trim().toLowerCase() === normalized) || null;
   }
 
   function syncPlanDraftWithCatalog(index) {
@@ -397,7 +406,7 @@
 
   function renderPlanSuggestions() {
     if (!els.planSuggestions) return;
-    const catalog = getPlanCatalog();
+    const catalog = getPlanCatalogWithDefault();
     els.planSuggestions.innerHTML = catalog
       .map((item) => `<option value="${escapeHtml(item.name)}"></option>`)
       .join("");
@@ -819,6 +828,47 @@
     await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
+  function getPlanCatalogWithDefault() {
+    return [
+      { name: "Sem plano", value: 0 },
+      ...getPlanCatalog().filter((item) => String(item.name || "").trim().toLowerCase() !== "sem plano")
+    ];
+  }
+
+  function getPlanSelectValue(name) {
+    const normalized = String(name || "").trim().toLowerCase();
+    if (!normalized) return "Sem plano";
+    const knownPlan = getPlanCatalogWithDefault().find((item) => item.name.trim().toLowerCase() === normalized);
+    return knownPlan ? knownPlan.name : "__custom__";
+  }
+
+  function applyPlanSelection(index, selectedName) {
+    const draft = state.modalPlans[index];
+    if (!draft) return;
+
+    const normalized = String(selectedName || "").trim();
+    if (!normalized || normalized === "__custom__") {
+      if (!draft.name) draft.name = getDefaultPlanName(index);
+      return;
+    }
+
+    const knownPlan = getPlanCatalogWithDefault().find((item) => item.name === normalized);
+    if (!knownPlan) return;
+
+    draft.name = knownPlan.name;
+    draft.value = Number(knownPlan.value || 0);
+  }
+
+  function getLeadPlanValueText(lead) {
+    const plans = getLeadPlans(lead);
+    if (!plans.length) {
+      const rawValue = Number(lead?.value || 0);
+      return rawValue > 0 ? formatPlanValue(rawValue) : "0";
+    }
+
+    return plans.map((item) => `${item.name}: ${formatPlanValue(item.value || 0)}`).join(" | ");
+  }
+
   function renderPlanItems() {
     if (!els.plansList) return;
     renderPlanSuggestions();
@@ -831,6 +881,10 @@
     els.plansList.innerHTML = state.modalPlans.map((item, index) => `
       <div class="plan-item" data-index="${index}">
         <div class="plan-item-grid">
+          <select class="plan-select-input">
+            ${getPlanCatalogWithDefault().map((plan) => `<option value="${escapeHtml(plan.name)}" ${getPlanSelectValue(item.name) === plan.name ? "selected" : ""}>${escapeHtml(plan.name)}</option>`).join("")}
+            <option value="__custom__" ${getPlanSelectValue(item.name) === "__custom__" ? "selected" : ""}>Personalizar nome</option>
+          </select>
           <input type="text" class="plan-name-input" placeholder="Nome do plano" list="planSuggestions" value="${escapeHtml(item.name || "")}" />
           <input type="number" class="plan-value-input" placeholder="Valor do plano" min="0" step="0.01" value="${escapeHtml(item.value ?? "")}" />
         </div>
@@ -842,17 +896,22 @@
   }
 
   function addPlanFromDraft() {
-    state.modalPlans.push({ name: getDefaultPlanName(state.modalPlans.length), value: "" });
-    syncPlanDraftWithCatalog(state.modalPlans.length - 1);
+    state.modalPlans.push({ name: "Sem plano", value: 0 });
+    applyPlanSelection(state.modalPlans.length - 1, "Sem plano");
     renderPlanItems();
   }
 
   function setupPlanListEvents() {
-    els.plansList?.addEventListener("input", (event) => {
+    const handlePlanDraftInput = (event) => {
       const item = event.target.closest(".plan-item");
       if (!item) return;
       const index = Number(item.dataset.index);
       if (Number.isNaN(index) || !state.modalPlans[index]) return;
+      if (event.target.classList.contains("plan-select-input")) {
+        applyPlanSelection(index, event.target.value);
+        renderPlanItems();
+        return;
+      }
       if (event.target.classList.contains("plan-name-input")) {
         state.modalPlans[index].name = event.target.value;
         if (syncPlanDraftWithCatalog(index)) renderPlanItems();
@@ -860,7 +919,10 @@
       if (event.target.classList.contains("plan-value-input")) {
         state.modalPlans[index].value = event.target.value;
       }
-    });
+    };
+
+    els.plansList?.addEventListener("input", handlePlanDraftInput);
+    els.plansList?.addEventListener("change", handlePlanDraftInput);
 
     els.plansList?.addEventListener("click", (event) => {
       const button = event.target.closest(".plan-remove-btn");
@@ -1372,9 +1434,9 @@
         ? metrics.planSummary.map((item) => `
           <tr>
             <td>${escapeHtml(item.plan)}</td>
-            <td>${brMoney(item.unitValue)}</td>
+            <td>${formatPlanValue(item.unitValue)}</td>
             <td>${item.count}</td>
-            <td>${brMoney(item.totalValue)}</td>
+            <td>${formatPlanValue(item.totalValue)}</td>
           </tr>
         `).join("")
         : '<tr><td colspan="4" class="empty-state">Nenhum fechamento com valor encontrado.</td></tr>';
@@ -1393,7 +1455,7 @@
             <div class="card-top">
               <div>
                 <div class="card-title">${escapeHtml(lead.name)}</div>
-                <div class="card-value">${hasLeadValue(lead) ? brMoney(lead.value) : "Sem valor"}</div>
+                <div class="card-value">${escapeHtml(getLeadPlanValueText(lead))}</div>
               </div>
               <span class="status-pill" style="background:${stage.color}22;color:${stage.color};border-color:${stage.color}55">
                 ${escapeHtml(stageTypeLabel(stage.stage_type, stage.custom_stage_type))}
@@ -1527,7 +1589,7 @@
         <td>${escapeHtml(lead.name)}</td>
         <td>${escapeHtml(lead.contact || "-")}</td>
         <td>${escapeHtml(lead.owner || "-")}</td>
-        <td>${hasLeadValue(lead) ? brMoney(lead.value) : "-"}</td>
+        <td>${escapeHtml(getLeadPlanValueText(lead))}</td>
         <td>${formatDate(lead.start_date)}</td>
         <td>${escapeHtml(lead.social_source || "-")}</td>
         <td>${escapeHtml(lead.traffic_type || "-")}</td>
@@ -1692,7 +1754,7 @@
       return acc;
     }, {});
 
-    const planLabels = metrics.planSummary.map((item) => `${item.plan} - ${brMoney(item.unitValue)}`);
+    const planLabels = metrics.planSummary.map((item) => `${item.plan} - ${formatPlanValue(item.unitValue)}`);
 
     const create = (key, id, config) => {
       const canvas = $(id);
@@ -1943,6 +2005,7 @@
   }
 
   function openLeadModal(lead = null) {
+    closeAllModals();
     els.leadForm.reset();
     els.leadId.value = lead?.id || "";
     els.modalTitle.textContent = lead ? "Editar Lead" : "Novo Lead";
@@ -1963,6 +2026,8 @@
     state.modalPlans = getLeadPlans(lead).map((item) => ({ ...item }));
     if (!state.modalPlans.length && Number(lead?.value || 0) > 0) {
       state.modalPlans = [{ name: getDefaultPlanName(0), value: Number(lead.value || 0) }];
+    } else if (!state.modalPlans.length) {
+      state.modalPlans = [{ name: "Sem plano", value: 0 }];
     }
     state.modalObservations = getLeadObservations(lead);
     renderPlanItems();
@@ -1976,6 +2041,7 @@
   }
 
   function openStageModal(stage = null) {
+    closeAllModals();
     els.stageForm.reset();
     els.stageId.value = stage?.id || "";
     els.stageModalTitle.textContent = stage ? "Editar pipeline" : "Adicionar pipeline";
@@ -1992,6 +2058,7 @@
   }
 
   async function openHistoryModal() {
+    closeAllModals();
     els.historyText.textContent = state.historyLoaded ? els.historyText.textContent : "Carregando histórico...";
     renderHistoryText();
     els.historyModalOverlay.classList.remove("hidden");
