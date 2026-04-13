@@ -141,6 +141,9 @@
             <div class="stat-card"><span>Maior Pipeline</span><strong id="topStage">-</strong></div>
           </section>
           <div class="pipeline-board-wrap">
+            <div class="pipeline-scrollbar-native" id="pipelineScrollTop">
+              <div id="pipelineScrollTopInner"></div>
+            </div>
             <div class="pipeline-scroll-area" id="pipelineScrollArea">
               <section class="pipeline" id="pipeline"></section>
             </div>
@@ -376,6 +379,11 @@
             <button type="button" class="btn btn-secondary hidden" id="removeCustomTypeBtn">Remover este tipo</button>
           </div>
           <small class="helper-text">Você pode criar, editar ou remover um tipo personalizado para este pipeline.</small>
+        </div>
+
+        <div class="form-group" id="savedStageTypesGroup">
+          <label>Tipos salvos</label>
+          <div id="savedStageTypes" class="saved-stage-types"></div>
         </div>
 
         <div class="form-actions">

@@ -104,6 +104,8 @@
     customStageTypeGroup: $("customStageTypeGroup"),
     customStageType: $("customStageType"),
     removeCustomTypeBtn: $("removeCustomTypeBtn"),
+    savedStageTypesGroup: $("savedStageTypesGroup"),
+    savedStageTypes: $("savedStageTypes"),
 
     historyModalOverlay: $("historyModalOverlay"),
     closeHistoryModalBtn: $("closeHistoryModalBtn"),
@@ -545,7 +547,31 @@
     const resolvedValue = selectedValue || (customValue ? `custom:${customValue}` : "andamento");
     els.stageType.value = finalOptions.some(([value]) => value === resolvedValue) ? resolvedValue : (customValue ? "personalizado" : "andamento");
     if (els.customStageType) els.customStageType.value = els.stageType.value === "personalizado" ? (customValue || "") : "";
+    renderCustomStageTypeList();
     toggleCustomStageTypeField();
+  }
+
+  function renderCustomStageTypeList() {
+    if (!els.savedStageTypes || !els.savedStageTypesGroup) return;
+
+    const types = getCustomStageTypes();
+    els.savedStageTypesGroup.classList.toggle("hidden", types.length === 0);
+
+    if (!types.length) {
+      els.savedStageTypes.innerHTML = "";
+      return;
+    }
+
+    const selected = String(els.stageType?.value || "");
+    els.savedStageTypes.innerHTML = types.map((type) => {
+      const active = selected === `custom:${type}`;
+      return `
+        <div class="saved-stage-type ${active ? "active" : ""}">
+          <button type="button" class="saved-stage-type-select" data-stage-type="${escapeHtml(type)}">${escapeHtml(type)}</button>
+          <button type="button" class="saved-stage-type-delete" data-stage-type-delete="${escapeHtml(type)}" aria-label="Excluir tipo ${escapeHtml(type)}">×</button>
+        </div>
+      `;
+    }).join("");
   }
 
   function toggleCustomStageTypeField() {
@@ -559,6 +585,7 @@
       els.customStageType.value = isNewCustom ? els.customStageType.value : (isExistingCustom ? selected.replace(/^custom:/, "") : "");
     }
     if (els.removeCustomTypeBtn) els.removeCustomTypeBtn.classList.toggle("hidden", !(isNewCustom || isExistingCustom));
+    renderCustomStageTypeList();
   }
 
   async function removeCurrentCustomStageType() {
@@ -2257,6 +2284,25 @@
     els.stageColor.addEventListener("input", (e) => updateStageColorPreview(e.target.value));
     els.stageType.addEventListener("change", toggleCustomStageTypeField);
     els.removeCustomTypeBtn.addEventListener("click", removeCurrentCustomStageType);
+    els.savedStageTypes?.addEventListener("click", async (event) => {
+      const selectBtn = event.target.closest("[data-stage-type]");
+      if (selectBtn) {
+        const type = String(selectBtn.dataset.stageType || "").trim();
+        if (!type) return;
+        els.stageType.value = `custom:${type}`;
+        toggleCustomStageTypeField();
+        return;
+      }
+
+      const deleteBtn = event.target.closest("[data-stage-type-delete]");
+      if (!deleteBtn) return;
+
+      const type = String(deleteBtn.dataset.stageTypeDelete || "").trim();
+      if (!type) return;
+
+      els.stageType.value = `custom:${type}`;
+      await removeCurrentCustomStageType();
+    });
     setupPlanListEvents();
     setupObservationListEvents();
     attachPipelineScrollEvents();
