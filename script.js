@@ -953,6 +953,41 @@
     showScreen("authScreen");
   }
 
+  async function handleAuthStateChange(event, session) {
+    if (event === "PASSWORD_RECOVERY") {
+      els.resetPasswordBox.classList.remove("hidden");
+      showScreen("authScreen");
+      setMessage(els.authMessage, "Digite sua nova senha e salve.");
+      return;
+    }
+
+    if (event === "SIGNED_OUT") {
+      state.currentUser = null;
+      state.profile = null;
+      state.stages = [];
+      state.customStageTypes = [];
+      state.hiddenPresetStageTypes = [];
+      state.leads = [];
+      state.profiles = [];
+      state.history = [];
+      state.activeView = "funil";
+      state.historyLoaded = false;
+      state.profilesLoaded = false;
+      showScreen("authScreen");
+      return;
+    }
+
+    if (event !== "SIGNED_IN" || !session?.user) return;
+
+    state.currentUser = session.user;
+    await ensureProfile();
+    if (els.appScreen.classList.contains("hidden")) {
+      await enterApp();
+    } else {
+      await loadAppData({ includeProfiles: state.profilesLoaded });
+    }
+  }
+
   async function ensureProfile() {
     if (!state.currentUser) return;
 
@@ -2433,38 +2468,12 @@
       if (e.target === els.historyModalOverlay) closeHistoryModal();
     });
 
-    state.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        els.resetPasswordBox.classList.remove("hidden");
-        showScreen("authScreen");
-        setMessage(els.authMessage, "Digite sua nova senha e salve.");
-        return;
-      }
-
-      if (event === "SIGNED_OUT") {
-        state.currentUser = null;
-        state.profile = null;
-        state.stages = [];
-        state.customStageTypes = [];
-        state.leads = [];
-        state.profiles = [];
-        state.history = [];
-        state.activeView = "funil";
-        state.historyLoaded = false;
-        state.profilesLoaded = false;
-        showScreen("authScreen");
-        return;
-      }
-
-      if (event === "SIGNED_IN" && session?.user) {
-        state.currentUser = session.user;
-        await ensureProfile();
-        if (els.appScreen.classList.contains("hidden")) {
-          await enterApp();
-        } else {
-          await loadAppData({ includeProfiles: state.profilesLoaded });
-        }
-      }
+    state.supabase.auth.onAuthStateChange((event, session) => {
+      window.setTimeout(() => {
+        handleAuthStateChange(event, session).catch((error) => {
+          console.error("Erro ao processar evento de autenticação:", error);
+        });
+      }, 0);
     });
   }
 
