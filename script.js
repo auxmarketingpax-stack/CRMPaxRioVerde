@@ -503,7 +503,7 @@
       fechado: "Fechado",
       cancelado: "Cancelado",
       espera: "Espera",
-      personalizado: customStageType || "Personalizado"
+      personalizado: "Personalizado"
     };
     return map[type] || customStageType || "Andamento";
   }
@@ -534,7 +534,7 @@
 
     const options = [...presetOptions, ...customOptions];
     if (includePersonalized) {
-      options.push({ value: "personalizado", label: "+ Novo tipo personalizado" });
+      options.push({ value: "personalizado", label: "+ Criar um novo" });
     }
 
     return options;
@@ -632,7 +632,7 @@
     els.savedStageTypesGroup.classList.remove("hidden");
 
     if (!types.length) {
-      els.savedStageTypes.innerHTML = '<div class="saved-stage-types-empty">Nenhum tipo disponivel na lista. Use "+ Novo tipo personalizado" para criar outro.</div>';
+      els.savedStageTypes.innerHTML = '<div class="saved-stage-types-empty">Nenhum tipo disponivel na lista. Use "+ Criar um novo" para adicionar outro.</div>';
       return;
     }
 
@@ -652,17 +652,31 @@
     const selected = String(els.stageType?.value || "andamento");
     const isNewCustom = selected === "personalizado";
     const isExistingCustom = selected.startsWith("custom:");
-    els.customStageTypeGroup.classList.toggle("hidden", !(isNewCustom || isExistingCustom));
+    const selectedOption = getSelectableStageTypeOptions(false).find((item) => item.value === selected);
+    const selectedLabel = selectedOption?.label || stageTypeLabel(selected);
+
+    els.customStageTypeGroup.classList.remove("hidden");
     if (els.customStageType) {
-      els.customStageType.disabled = !isNewCustom;
-      els.customStageType.value = isNewCustom ? els.customStageType.value : (isExistingCustom ? selected.replace(/^custom:/, "") : "");
+      els.customStageType.disabled = false;
+      if (isNewCustom) {
+        els.customStageType.placeholder = "Criar um novo tipo";
+      } else {
+        els.customStageType.placeholder = "Personalize o tipo selecionado";
+      }
+
+      if (isNewCustom) {
+        els.customStageType.value = els.customStageType.value || "";
+      } else if (isExistingCustom) {
+        els.customStageType.value = selected.replace(/^custom:/, "");
+      } else {
+        els.customStageType.value = selectedLabel;
+      }
     }
     const canRemoveSelected = selected && selected !== "personalizado";
     if (els.savedStageTypeActions) els.savedStageTypeActions.classList.toggle("hidden", !canRemoveSelected);
     if (els.removeSelectedStageTypeBtn) {
       els.removeSelectedStageTypeBtn.classList.toggle("hidden", !canRemoveSelected);
       if (canRemoveSelected) {
-        const selectedOption = getSelectableStageTypeOptions(false).find((item) => item.value === selected);
         els.removeSelectedStageTypeBtn.textContent = `Remover tipo "${selectedOption?.label || stageTypeLabel(selected)}"`;
       }
     }
@@ -1998,13 +2012,21 @@
     event.preventDefault();
 
     const selectedType = String(els.stageType.value || "andamento").trim();
-
-    const customStageType = selectedType.startsWith("custom:") ? selectedType.replace(/^custom:/, "") : String(els.customStageType?.value || "").trim();
+    const selectedOption = getSelectableStageTypeOptions(false).find((item) => item.value === selectedType);
+    const selectedLabel = selectedOption?.label || stageTypeLabel(selectedType);
+    const customStageTypeInput = String(els.customStageType?.value || "").trim();
+    const customStageType = selectedType.startsWith("custom:")
+      ? (customStageTypeInput || selectedType.replace(/^custom:/, ""))
+      : customStageTypeInput;
+    const shouldSaveAsCustom =
+      selectedType === "personalizado" ||
+      selectedType.startsWith("custom:") ||
+      (!!customStageType && customStageType !== selectedLabel);
     const payload = {
       name: els.stageName.value.trim(),
       color: els.stageColor.value,
-      stage_type: (selectedType === "personalizado" || selectedType.startsWith("custom:")) ? "personalizado" : (["andamento", "fechado", "cancelado", "espera"].includes(selectedType) ? selectedType : "andamento"),
-      custom_stage_type: (selectedType === "personalizado" || selectedType.startsWith("custom:")) ? customStageType : null,
+      stage_type: shouldSaveAsCustom ? "personalizado" : (["andamento", "fechado", "cancelado", "espera"].includes(selectedType) ? selectedType : "andamento"),
+      custom_stage_type: shouldSaveAsCustom ? customStageType : null,
       position: els.stageId.value ? (state.stages.find((s) => s.id === els.stageId.value)?.position ?? state.stages.length) : state.stages.length,
       created_by: state.currentUser.id
     };

@@ -842,16 +842,17 @@ input:focus,select:focus,textarea:focus{
   }
 
   .pipeline-scrollbar-native {
-    display: none;
+    display: block;
+    height: 16px;
   }
 
   .pipeline-scroll-area {
-    scrollbar-width: thin;
+    scrollbar-width: none;
     padding-bottom: 2px;
   }
 
   .pipeline-scroll-area::-webkit-scrollbar {
-    height: 8px;
+    height: 0;
   }
 
   .pipeline {
