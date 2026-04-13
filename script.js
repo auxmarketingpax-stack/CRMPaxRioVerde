@@ -119,6 +119,10 @@
     leads: [],
     profiles: [],
     history: [],
+    activeView: "funil",
+    historyLoaded: false,
+    profilesLoaded: false,
+    chartLoader: null,
     selectedLeadIds: new Set(),
     modalPlans: [],
     modalObservations: [],
@@ -157,6 +161,29 @@
       style: "currency",
       currency: "BRL"
     });
+  }
+
+  function loadExternalScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureChartLibrary() {
+    if (typeof window.Chart !== "undefined") return;
+    if (!state.chartLoader) {
+      state.chartLoader = loadExternalScript("https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js")
+        .catch((error) => {
+          state.chartLoader = null;
+          throw error;
+        });
+    }
+    await state.chartLoader;
   }
 
   function formatDate(value) {
@@ -482,7 +509,7 @@
     els.stageType.value = "andamento";
     if (els.customStageType) els.customStageType.value = "";
     toggleCustomStageTypeField();
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
 
@@ -692,7 +719,7 @@
           to_position: targetIndex
         }
       );
-      await loadAppData();
+      await loadAppData({ includeProfiles: state.profilesLoaded });
     } catch (error) {
       alert(error.message || "Não foi possível reordenar o pipeline.");
     }
@@ -736,22 +763,14 @@
       email: state.currentUser.email
     };
 
-    const { error: upsertError } = await state.supabase
+    const { data: profile, error: upsertError } = await state.supabase
       .from("profiles")
-      .upsert(payload, { onConflict: "id" });
+      .upsert(payload, { onConflict: "id" })
+      .select("*")
+      .maybeSingle();
 
     if (upsertError) {
       console.error("Erro ao garantir profile:", upsertError);
-    }
-
-    const { data: profile, error } = await state.supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", state.currentUser.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error(error);
     }
 
     state.profile = profile || payload;
@@ -763,24 +782,25 @@
     els.mobileOrgName.textContent = "CRM Pax";
     els.userWelcome.textContent = getUserDisplayName();
 
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
     bindView("funil");
   }
 
-  async function loadAppData() {
-    const [stagesRes, leadsRes, profilesRes, historyRes] = await Promise.all([
+  async function loadAppData(options = {}) {
+    const includeProfiles = options.includeProfiles === true;
+    const [stagesRes, leadsRes, profilesRes] = await Promise.all([
       state.supabase.from("stages").select("*").order("position", { ascending: true }),
       state.supabase.from("leads").select("*").order("created_at", { ascending: false }),
-      state.supabase.from("profiles").select("*").order("full_name", { ascending: true }),
-      state.supabase.from("change_history").select("*").order("created_at", { ascending: false }).limit(300)
+      includeProfiles
+        ? state.supabase.from("profiles").select("*").order("full_name", { ascending: true })
+        : Promise.resolve({ data: state.profiles, error: null })
     ]);
 
     if (stagesRes.error) console.error(stagesRes.error);
     if (leadsRes.error) console.error(leadsRes.error);
-    if (profilesRes.error) console.error(profilesRes.error);
-    if (historyRes.error) console.error(historyRes.error);
+    if (includeProfiles && profilesRes.error) console.error(profilesRes.error);
 
-    const firstError = stagesRes.error || leadsRes.error || profilesRes.error || historyRes.error;
+    const firstError = stagesRes.error || leadsRes.error || profilesRes.error;
     if (firstError) {
       alert(`Erro ao carregar dados do Supabase: ${firstError.message}`);
       return;
@@ -788,16 +808,57 @@
 
     state.stages = stagesRes.data || [];
     state.leads = (leadsRes.data || []).map(normalizeLead);
-    state.profiles = profilesRes.data || [];
-    state.history = historyRes.data || [];
+    if (includeProfiles) {
+      state.profiles = profilesRes.data || [];
+      state.profilesLoaded = true;
+    }
     syncSelectedLeadIds();
 
     if (state.stages.length === 0) {
       await seedDefaultStages();
-      return loadAppData();
+      return loadAppData({ includeProfiles });
     }
 
     renderAll();
+  }
+
+  async function loadProfilesIfNeeded(force = false) {
+    if (!force && state.profilesLoaded) return;
+
+    const { data, error } = await state.supabase
+      .from("profiles")
+      .select("*")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    state.profiles = data || [];
+    state.profilesLoaded = true;
+    if (state.activeView === "equipe") renderTeam();
+    if (!els.historyModalOverlay.classList.contains("hidden")) renderHistoryText();
+  }
+
+  async function loadHistory(force = false) {
+    if (!force && state.historyLoaded) return;
+
+    const { data, error } = await state.supabase
+      .from("change_history")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(300);
+
+    if (error) {
+      console.error(error);
+      if (force) alert(`Erro ao carregar histórico: ${error.message}`);
+      return;
+    }
+
+    state.history = data || [];
+    state.historyLoaded = true;
+    renderHistoryText();
   }
   
   async function seedDefaultStages() {
@@ -1080,7 +1141,7 @@
     );
 
     state.selectedLeadIds.clear();
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   function renderLeadTable() {
@@ -1508,7 +1569,7 @@
 
     alert(`${payload.length} lead(s) importado(s) com sucesso.`);
     els.csvFileInput.value = "";
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   function renderAll() {
@@ -1520,7 +1581,9 @@
     renderTeam();
     renderStagesConfig();
     renderHistoryText();
-    renderCharts();
+    if (state.activeView === "relatorios" && typeof window.Chart !== "undefined") {
+      renderCharts();
+    }
     bindGeneralActionEvents();
   }
 
@@ -1570,9 +1633,11 @@
     els.stageModalOverlay.classList.add("hidden");
   }
 
-  function openHistoryModal() {
+  async function openHistoryModal() {
+    els.historyText.textContent = state.historyLoaded ? els.historyText.textContent : "Carregando histórico...";
     renderHistoryText();
     els.historyModalOverlay.classList.remove("hidden");
+    await loadHistory();
   }
 
   function closeHistoryModal() {
@@ -1595,6 +1660,7 @@
 
     const { error } = await state.supabase.from("change_history").insert([row]);
     if (error) console.error("Erro ao gravar histórico:", error);
+    state.historyLoaded = false;
   }
 
   async function submitLead(event) {
@@ -1675,7 +1741,7 @@
     }
 
     closeLeadModal();
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   async function submitStage(event) {
@@ -1708,7 +1774,7 @@
     }
 
     closeStageModal();
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   async function moveLeadToStage(leadId, stageId) {
@@ -1739,7 +1805,7 @@
       }
     );
 
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   async function deleteLead(id) {
@@ -1762,7 +1828,7 @@
       lead
     );
 
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   async function editStage(id) {
@@ -1819,7 +1885,7 @@
       stage
     );
 
-    await loadAppData();
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   async function sendResetPasswordEmail() {
@@ -1849,6 +1915,8 @@
   }
 
   function bindView(name) {
+    state.activeView = name;
+
     document.querySelectorAll(".menu-item").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.view === name);
     });
@@ -1870,7 +1938,18 @@
     els.sidebar.classList.remove("open");
 
     if (name === "relatorios") {
-      setTimeout(() => renderCharts(), 80);
+      setTimeout(async () => {
+        try {
+          await ensureChartLibrary();
+          renderCharts();
+        } catch (error) {
+          console.error(error);
+        }
+      }, 80);
+    }
+
+    if (name === "equipe") {
+      void loadProfilesIfNeeded();
     }
   }
 
@@ -2107,19 +2186,8 @@
 
     els.closeHistoryModalBtn.addEventListener("click", closeHistoryModal);
     els.refreshHistoryBtn.addEventListener("click", async () => {
-      const { data, error } = await state.supabase
-        .from("change_history")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(300);
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
-      state.history = data || [];
-      renderHistoryText();
+      els.historyText.textContent = "Carregando histórico...";
+      await loadHistory(true);
     });
 
     els.modalOverlay.addEventListener("click", (e) => {
@@ -2149,6 +2217,9 @@
         state.leads = [];
         state.profiles = [];
         state.history = [];
+        state.activeView = "funil";
+        state.historyLoaded = false;
+        state.profilesLoaded = false;
         showScreen("authScreen");
         return;
       }
@@ -2159,7 +2230,7 @@
         if (els.appScreen.classList.contains("hidden")) {
           await enterApp();
         } else {
-          await loadAppData();
+          await loadAppData({ includeProfiles: state.profilesLoaded });
         }
       }
     });
