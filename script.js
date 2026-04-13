@@ -116,6 +116,7 @@
     currentUser: null,
     profile: null,
     stages: [],
+    customStageTypes: [],
     leads: [],
     profiles: [],
     history: [],
@@ -161,6 +162,32 @@
       style: "currency",
       currency: "BRL"
     });
+  }
+
+  function isMissingRelationError(error) {
+    const code = String(error?.code || "").toUpperCase();
+    const message = String(error?.message || "").toLowerCase();
+    return code === "PGRST205" || code === "42P01" || message.includes("does not exist") || message.includes("could not find the table");
+  }
+
+  function getStoredCustomStageTypes() {
+    try {
+      const raw = window.localStorage.getItem("crmPax.customStageTypes");
+      const parsed = JSON.parse(raw || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function persistCustomStageTypes(values) {
+    const normalized = sortStageTypeNames(values);
+    try {
+      window.localStorage.setItem("crmPax.customStageTypes", JSON.stringify(normalized));
+    } catch (_error) {
+      // Ignore storage failures and keep the in-memory list.
+    }
+    return normalized;
   }
 
   function loadExternalScript(src) {
@@ -442,12 +469,62 @@
     return map[type] || customStageType || "Andamento";
   }
 
-  function getCustomStageTypes() {
+  function sortStageTypeNames(values) {
     return [...new Set(
-      state.stages
-        .map((stage) => String(stage.custom_stage_type || "").trim())
+      (Array.isArray(values) ? values : [])
+        .map((item) => String(item || "").trim())
         .filter(Boolean)
     )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }
+
+  function getCustomStageTypes() {
+    return sortStageTypeNames([
+      ...state.customStageTypes,
+      ...getStoredCustomStageTypes(),
+      ...state.stages.map((stage) => String(stage.custom_stage_type || "").trim())
+    ]);
+  }
+
+  async function saveCustomStageType(name) {
+    const normalized = String(name || "").trim();
+    if (!normalized) return true;
+
+    state.customStageTypes = persistCustomStageTypes([...state.customStageTypes, normalized]);
+
+    const { error } = await state.supabase
+      .from("stage_type_catalog")
+      .upsert(
+        { name: normalized, created_by: state.currentUser?.id || null },
+        { onConflict: "name" }
+      );
+
+    if (error && !isMissingRelationError(error)) {
+      console.error("Erro ao salvar tipo personalizado:", error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async function deleteCustomStageTypeFromCatalog(name) {
+    const normalized = String(name || "").trim();
+    if (!normalized) return true;
+
+    state.customStageTypes = persistCustomStageTypes(
+      state.customStageTypes.filter((item) => item !== normalized)
+    );
+
+    const { error } = await state.supabase
+      .from("stage_type_catalog")
+      .delete()
+      .eq("name", normalized);
+
+    if (error && !isMissingRelationError(error)) {
+      console.error("Erro ao excluir tipo personalizado:", error);
+      return false;
+    }
+
+    return true;
   }
 
   function refreshStageTypeOptions(selectedValue = "", customValue = "") {
@@ -505,6 +582,9 @@
         .in("id", affected.map((stage) => stage.id));
       if (error) return alert(`Erro no Supabase: ${error.message}`);
     }
+
+    const removed = await deleteCustomStageTypeFromCatalog(customValue);
+    if (!removed) return alert("Não foi possível excluir o tipo personalizado da lista.");
 
     els.stageType.value = "andamento";
     if (els.customStageType) els.customStageType.value = "";
@@ -788,19 +868,25 @@
 
   async function loadAppData(options = {}) {
     const includeProfiles = options.includeProfiles === true;
-    const [stagesRes, leadsRes, profilesRes] = await Promise.all([
+    const [stagesRes, leadsRes, profilesRes, stageTypesRes] = await Promise.all([
       state.supabase.from("stages").select("*").order("position", { ascending: true }),
       state.supabase.from("leads").select("*").order("created_at", { ascending: false }),
       includeProfiles
         ? state.supabase.from("profiles").select("*").order("full_name", { ascending: true })
-        : Promise.resolve({ data: state.profiles, error: null })
+        : Promise.resolve({ data: state.profiles, error: null }),
+      state.supabase.from("stage_type_catalog").select("name").order("name", { ascending: true })
     ]);
 
     if (stagesRes.error) console.error(stagesRes.error);
     if (leadsRes.error) console.error(leadsRes.error);
     if (includeProfiles && profilesRes.error) console.error(profilesRes.error);
+    if (stageTypesRes.error && !isMissingRelationError(stageTypesRes.error)) console.error(stageTypesRes.error);
 
-    const firstError = stagesRes.error || leadsRes.error || profilesRes.error;
+    const firstError =
+      stagesRes.error ||
+      leadsRes.error ||
+      profilesRes.error ||
+      (stageTypesRes.error && !isMissingRelationError(stageTypesRes.error) ? stageTypesRes.error : null);
     if (firstError) {
       alert(`Erro ao carregar dados do Supabase: ${firstError.message}`);
       return;
@@ -808,6 +894,10 @@
 
     state.stages = stagesRes.data || [];
     state.leads = (leadsRes.data || []).map(normalizeLead);
+    state.customStageTypes = persistCustomStageTypes([
+      ...getStoredCustomStageTypes(),
+      ...(stageTypesRes.data || []).map((item) => item?.name)
+    ]);
     if (includeProfiles) {
       state.profiles = profilesRes.data || [];
       state.profilesLoaded = true;
@@ -1762,6 +1852,11 @@
     if (!payload.name) return alert("Informe o nome da etapa.");
     if (payload.stage_type === "personalizado" && !payload.custom_stage_type) return alert("Informe o tipo personalizado.");
 
+    if (payload.stage_type === "personalizado") {
+      const savedType = await saveCustomStageType(payload.custom_stage_type);
+      if (!savedType) return alert("Não foi possível salvar o novo tipo personalizado.");
+    }
+
     if (els.stageId.value) {
       const before = state.stages.find((s) => s.id === els.stageId.value);
       const { error } = await state.supabase.from("stages").update({ name: payload.name, color: payload.color, stage_type: payload.stage_type, custom_stage_type: payload.custom_stage_type, position: payload.position }).eq("id", els.stageId.value);
@@ -2086,6 +2181,7 @@
       state.currentUser = null;
       state.profile = null;
       state.stages = [];
+      state.customStageTypes = [];
       state.leads = [];
       state.profiles = [];
       state.history = [];
@@ -2214,6 +2310,7 @@
         state.currentUser = null;
         state.profile = null;
         state.stages = [];
+        state.customStageTypes = [];
         state.leads = [];
         state.profiles = [];
         state.history = [];
