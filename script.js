@@ -87,6 +87,7 @@
     trafficType: $("trafficType"),
     addPlanBtn: $("addPlanBtn"),
     plansList: $("plansList"),
+    planSuggestions: $("planSuggestions"),
     addObservationBtn: $("addObservationBtn"),
     observationsList: $("observationsList"),
 
@@ -347,6 +348,61 @@
       .filter((item) => item.name);
   }
 
+  function getDefaultPlanName(index = 0) {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const safeIndex = Math.max(0, Number(index) || 0);
+    const letter = alphabet[safeIndex % alphabet.length];
+    const suffix = Math.floor(safeIndex / alphabet.length);
+    return `Plano ${letter}${suffix ? suffix + 1 : ""}`;
+  }
+
+  function getPlanCatalog() {
+    const catalog = new Map();
+
+    state.leads.forEach((lead) => {
+      const plans = getLeadPlans(lead);
+      const fallbackPlans = plans.length
+        ? plans
+        : (Number(lead?.value || 0) > 0 ? [{ name: getDefaultPlanName(0), value: Number(lead.value || 0) }] : []);
+
+      fallbackPlans.forEach((item) => {
+        const name = String(item?.name || "").trim();
+        if (!name || catalog.has(name)) return;
+        catalog.set(name, Number(item?.value || 0));
+      });
+    });
+
+    return [...catalog.entries()]
+      .map(([name, value]) => ({ name, value: Number.isFinite(Number(value)) ? Number(value) : 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
+
+  function findKnownPlan(name) {
+    const normalized = String(name || "").trim().toLowerCase();
+    if (!normalized) return null;
+    return getPlanCatalog().find((item) => item.name.trim().toLowerCase() === normalized) || null;
+  }
+
+  function syncPlanDraftWithCatalog(index) {
+    const draft = state.modalPlans[index];
+    if (!draft) return false;
+
+    const knownPlan = findKnownPlan(draft.name);
+    if (!knownPlan) return false;
+
+    draft.name = knownPlan.name;
+    draft.value = knownPlan.value;
+    return true;
+  }
+
+  function renderPlanSuggestions() {
+    if (!els.planSuggestions) return;
+    const catalog = getPlanCatalog();
+    els.planSuggestions.innerHTML = catalog
+      .map((item) => `<option value="${escapeHtml(item.name)}"></option>`)
+      .join("");
+  }
+
 
   function getLeadMeta(rawNotes, leadValue = 0) {
     const raw = String(rawNotes || "");
@@ -370,6 +426,8 @@
       const legacyPlan = String(parsed?.plan || "").trim();
       if (!plans.length && legacyPlan) {
         plans.push({ name: legacyPlan, value: Number.isFinite(Number(leadValue)) ? Number(leadValue) : 0 });
+      } else if (!plans.length && Number(leadValue || 0) > 0) {
+        plans.push({ name: getDefaultPlanName(0), value: Number(leadValue || 0) });
       }
       if (!observations.length && legacyText) observations.push({ date: "", text: legacyText });
       return {
@@ -401,10 +459,13 @@
   }
 
   function normalizeLead(lead) {
+    const meta = getLeadMeta(lead?.notes || "", lead?.value || 0);
+    const computedValue = cleanPlanList(meta.plans || []).reduce((sum, item) => sum + Number(item.value || 0), 0);
     return {
       ...lead,
+      value: computedValue || Number(lead?.value || 0) || 0,
       start_date: normalizeDateInput(lead?.start_date || "") || String(lead?.start_date || "").trim(),
-      _meta: getLeadMeta(lead?.notes || "", lead?.value || 0)
+      _meta: meta
     };
   }
 
@@ -760,6 +821,7 @@
 
   function renderPlanItems() {
     if (!els.plansList) return;
+    renderPlanSuggestions();
 
     if (!state.modalPlans.length) {
       els.plansList.innerHTML = '<div class="plan-empty">Nenhum plano adicionado ainda.</div>';
@@ -769,7 +831,7 @@
     els.plansList.innerHTML = state.modalPlans.map((item, index) => `
       <div class="plan-item" data-index="${index}">
         <div class="plan-item-grid">
-          <input type="text" class="plan-name-input" placeholder="Nome do plano" value="${escapeHtml(item.name || "")}" />
+          <input type="text" class="plan-name-input" placeholder="Nome do plano" list="planSuggestions" value="${escapeHtml(item.name || "")}" />
           <input type="number" class="plan-value-input" placeholder="Valor do plano" min="0" step="0.01" value="${escapeHtml(item.value ?? "")}" />
         </div>
         <div class="plan-item-actions">
@@ -780,7 +842,8 @@
   }
 
   function addPlanFromDraft() {
-    state.modalPlans.push({ name: "", value: "" });
+    state.modalPlans.push({ name: getDefaultPlanName(state.modalPlans.length), value: "" });
+    syncPlanDraftWithCatalog(state.modalPlans.length - 1);
     renderPlanItems();
   }
 
@@ -792,6 +855,7 @@
       if (Number.isNaN(index) || !state.modalPlans[index]) return;
       if (event.target.classList.contains("plan-name-input")) {
         state.modalPlans[index].name = event.target.value;
+        if (syncPlanDraftWithCatalog(index)) renderPlanItems();
       }
       if (event.target.classList.contains("plan-value-input")) {
         state.modalPlans[index].value = event.target.value;
@@ -1886,7 +1950,7 @@
     els.name.value = lead?.name || "";
     els.contact.value = lead?.contact || "";
     els.owner.value = lead?.owner || getUserDisplayName();
-    els.value.value = lead?.value || "";
+    if (els.value) els.value.value = "";
     els.startDate.value = lead?.start_date || "";
     els.stage.value = lead?.stage_id || state.stages[0]?.id || "";
     if (!state.stages.length) {
@@ -1897,6 +1961,9 @@
     els.socialSource.value = lead?.social_source || "";
     els.trafficType.value = lead?.traffic_type || "Organico";
     state.modalPlans = getLeadPlans(lead).map((item) => ({ ...item }));
+    if (!state.modalPlans.length && Number(lead?.value || 0) > 0) {
+      state.modalPlans = [{ name: getDefaultPlanName(0), value: Number(lead.value || 0) }];
+    }
     state.modalObservations = getLeadObservations(lead);
     renderPlanItems();
     renderObservationItems();
@@ -1959,10 +2026,8 @@
 
     const existingLead = state.leads.find((lead) => lead.id === els.leadId.value) || null;
     const existingMeta = getLeadMeta(existingLead?.notes || "");
-    const rawValue = String(els.value.value || "").trim();
-    const parsedLeadValue = parseMoney(rawValue);
-    const leadValue = Number.isFinite(parsedLeadValue) ? Number(parsedLeadValue) : 0;
     const draftPlans = cleanPlanList(state.modalPlans.map((item) => ({ name: item.name, value: item.value })));
+    const leadValue = draftPlans.reduce((sum, item) => sum + Number(item.value || 0), 0);
     const draftObservations = cleanObservationList(state.modalObservations);
 
     const invalidPlan = state.modalPlans.find((item) => String(item?.name || "").trim() && String(item?.value || "").trim() === "");

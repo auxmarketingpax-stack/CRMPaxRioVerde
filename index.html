@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260413-4" />
 </head>
 <body>
   <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
@@ -270,6 +270,7 @@
 
       <form id="leadForm" class="lead-form">
         <input type="hidden" id="leadId" />
+        <input type="hidden" id="value" />
 
         <div class="form-grid">
           <div class="form-group">
@@ -285,11 +286,6 @@
           <div class="form-group">
             <label for="owner">Responsável</label>
             <input type="text" id="owner" required />
-          </div>
-
-          <div class="form-group">
-            <label for="value">Valor (R$) - opcional</label>
-            <input type="number" id="value" min="0" step="0.01" />
           </div>
 
           <div class="form-group">
@@ -313,6 +309,7 @@
               <button type="button" class="btn btn-secondary" id="addPlanBtn">Adicionar plano</button>
             </div>
             <div id="plansList" class="plans-list"></div>
+            <datalist id="planSuggestions"></datalist>
           </div>
 
           <div class="form-group">
@@ -414,7 +411,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="script.js"></script>
+  <script src="config.js?v=20260413-4"></script>
+  <script src="script.js?v=20260413-4"></script>
 </body>
 </html>
