@@ -150,6 +150,14 @@
     { value: "espera", label: "Espera" }
   ];
 
+  const STORAGE_CACHE_KEYS = [
+    "crmPax.customStageTypes",
+    "crmPax.hiddenPresetStageTypes"
+  ];
+
+  const STORAGE_CLEANUP_KEY = "crmPax.storageCleanupAt";
+  const STORAGE_CLEANUP_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
+
   function createClient() {
     const cfg = window.APP_CONFIG || {};
     if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
@@ -227,6 +235,25 @@
     }
 
     return normalized;
+  }
+
+  function runPeriodicStorageCleanup() {
+    try {
+      const now = Date.now();
+      const lastCleanup = Number(window.localStorage.getItem(STORAGE_CLEANUP_KEY) || 0);
+
+      if (!lastCleanup) {
+        window.localStorage.setItem(STORAGE_CLEANUP_KEY, String(now));
+        return;
+      }
+
+      if (now - lastCleanup < STORAGE_CLEANUP_INTERVAL_MS) return;
+
+      STORAGE_CACHE_KEYS.forEach((key) => window.localStorage.removeItem(key));
+      window.localStorage.setItem(STORAGE_CLEANUP_KEY, String(now));
+    } catch (_error) {
+      // Ignore storage failures and continue boot.
+    }
   }
 
   function loadExternalScript(src) {
@@ -2501,6 +2528,7 @@
 
   async function init() {
     try {
+      runPeriodicStorageCleanup();
       createClient();
       bindEvents();
       await bootstrap();
