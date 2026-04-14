@@ -2328,11 +2328,19 @@
 
     const existingLead = state.leads.find((lead) => lead.id === els.leadId.value) || null;
     const existingMeta = getLeadMeta(existingLead?.notes || "");
-    const draftPlans = cleanPlanList(state.modalPlans.map((item) => ({ name: item.name, value: item.value })));
+    const normalizedModalPlans = state.modalPlans.map((item) => {
+      const name = String(item?.name || "").trim();
+      const rawValue = String(item?.value ?? "").trim();
+      return {
+        name,
+        value: isNoPlanName(name) && rawValue === "" ? 0 : item?.value
+      };
+    });
+    const draftPlans = cleanPlanList(normalizedModalPlans.map((item) => ({ name: item.name, value: item.value })));
     const leadValue = getPlansTotalValue(draftPlans);
     const draftObservations = cleanObservationList(state.modalObservations);
 
-    const invalidPlan = state.modalPlans.find((item) => String(item?.name || "").trim() && String(item?.value || "").trim() === "");
+    const invalidPlan = normalizedModalPlans.find((item) => item.name && !isNoPlanName(item.name) && String(item?.value ?? "").trim() === "");
     if (invalidPlan) return alert("Ao adicionar um plano, informe também o valor.");
 
     const payload = {
