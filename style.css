@@ -1439,107 +1439,135 @@ input[type="color"]::-moz-color-swatch {
 
 @media (max-width: 1680px) and (min-width: 1101px) {
   :root{
-    --sidebar-width:236px;
-    --sidebar-padding-y:20px;
-    --sidebar-padding-x:16px;
-    --main-padding:20px;
-    --topbar-title-size:26px;
-    --topbar-subtitle-size:15px;
-    --control-min-width:198px;
-    --stats-gap:14px;
-    --stats-margin-bottom:18px;
-    --stat-padding:16px;
-    --stat-value-size:26px;
-    --pipeline-column-width:336px;
-    --pipeline-gap:16px;
-    --column-header-padding:14px;
-  }
-
-  .brand h1{font-size:20px}
-  .menu-item{padding:11px 13px}
-  .topbar-actions{gap:10px;row-gap:12px}
-  .btn{padding:11px 14px}
-}
-
-@media (max-width: 1440px) and (min-width: 1101px) {
-  :root{
-    --sidebar-width:220px;
+    --sidebar-width:224px;
     --sidebar-padding-y:18px;
     --sidebar-padding-x:14px;
-    --main-padding:16px;
+    --main-padding:18px;
     --topbar-title-size:24px;
     --topbar-subtitle-size:14px;
     --topbar-padding-top:12px;
     --topbar-padding-bottom:14px;
-    --control-min-width:174px;
+    --control-min-width:184px;
     --stats-gap:12px;
     --stats-margin-bottom:14px;
     --stat-padding:14px;
     --stat-label-size:13px;
     --stat-value-size:24px;
-    --pipeline-column-width:308px;
+    --pipeline-column-width:324px;
     --pipeline-gap:14px;
     --column-header-padding:13px;
-    --column-body-padding:12px;
-    --column-title-size:15px;
-    --card-padding:12px;
-    --card-title-size:15px;
-    --card-text-size:12px;
-    --badge-font-size:11px;
   }
 
   .brand-logo{
-    width:74px;
-    height:56px;
+    width:80px;
+    height:58px;
     padding:8px;
   }
   .brand h1{font-size:18px}
   .brand p{font-size:12px}
-  .topbar-actions{gap:7px;row-gap:8px}
+  .menu-item{padding:10px 12px;font-size:14px}
+  .topbar-actions{gap:8px;row-gap:10px}
   .topbar-actions input,
   .topbar-actions .filter-btn,
   .topbar-actions .btn{
     font-size:13px;
   }
-  .btn{padding:9px 11px}
-  .btn-history{padding:7px 9px;font-size:12px}
-  .icon-btn{
-    min-width:34px;
-    height:34px;
+  .btn{padding:10px 12px}
+  .btn-history{padding:8px 10px;font-size:12px}
+  .stats-extended,
+  .report-grid-extended {
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
   }
-  .card-value{max-width:220px}
 }
 
-@media (max-width: 1280px) and (min-width: 1101px) {
+@media (max-width: 1440px) and (min-width: 1101px) {
   :root{
     --sidebar-width:204px;
+    --sidebar-padding-y:16px;
+    --sidebar-padding-x:13px;
     --main-padding:14px;
     --topbar-title-size:22px;
     --topbar-subtitle-size:13px;
+    --topbar-padding-top:10px;
+    --topbar-padding-bottom:12px;
     --control-min-width:156px;
     --stats-gap:10px;
     --stats-margin-bottom:12px;
     --stat-padding:12px;
     --stat-label-size:12px;
     --stat-value-size:22px;
-    --pipeline-column-width:284px;
+    --pipeline-column-width:292px;
     --pipeline-gap:12px;
     --column-header-padding:12px;
     --column-body-padding:11px;
-    --column-title-size:14px;
+    --column-title-size:15px;
     --card-padding:11px;
     --card-title-size:14px;
     --card-text-size:12px;
+    --badge-font-size:11px;
   }
 
   .brand-logo{
-    width:66px;
-    height:50px;
+    width:70px;
+    height:52px;
+    padding:7px;
   }
-  .menu-item{padding:10px 11px;font-size:14px}
+  .brand h1{font-size:17px}
+  .brand p{font-size:11px}
+  .topbar-actions{gap:6px;row-gap:7px}
+  .topbar-actions input,
+  .topbar-actions .filter-btn,
+  .topbar-actions .btn{
+    font-size:12px;
+  }
+  .btn{padding:8px 10px}
+  .btn-history{padding:6px 8px;font-size:11px}
+  .icon-btn{
+    min-width:32px;
+    height:32px;
+  }
+  .card-value{max-width:200px}
+  .stats-extended,
+  .report-grid-extended {
+    grid-template-columns: repeat(4, minmax(138px, 1fr));
+  }
+}
+
+@media (max-width: 1280px) and (min-width: 1101px) {
+  :root{
+    --sidebar-width:188px;
+    --main-padding:12px;
+    --topbar-title-size:20px;
+    --topbar-subtitle-size:12px;
+    --topbar-padding-top:8px;
+    --topbar-padding-bottom:10px;
+    --control-min-width:118px;
+    --stats-gap:8px;
+    --stats-margin-bottom:10px;
+    --stat-padding:10px;
+    --stat-label-size:11px;
+    --stat-value-size:20px;
+    --pipeline-column-width:268px;
+    --pipeline-gap:10px;
+    --column-header-padding:11px;
+    --column-body-padding:10px;
+    --column-title-size:13px;
+    --card-padding:10px;
+    --card-title-size:14px;
+    --card-text-size:11px;
+    --badge-font-size:10px;
+  }
+
+  .brand-logo{
+    width:60px;
+    height:46px;
+  }
+  .brand h1{font-size:16px}
+  .brand p{font-size:10px}
+  .menu-item{padding:9px 10px;font-size:13px}
   .topbar-actions{
-    gap:6px;
-    row-gap:7px;
+    gap:5px;
+    row-gap:6px;
     flex-wrap:nowrap;
     overflow-x:auto;
     scrollbar-width:none;
@@ -1547,28 +1575,46 @@ input[type="color"]::-moz-color-swatch {
   .topbar-actions::-webkit-scrollbar{display:none}
   .topbar-actions input,
   .topbar-actions .filter-dropdown{
-    min-width:128px;
+    min-width:118px;
   }
   .topbar-actions input,
   .filter-btn{
-    font-size:12px;
-    min-height:38px;
-    padding:8px 9px;
+    font-size:11px;
+    min-height:36px;
+    padding:7px 8px;
   }
   .topbar-actions .btn{
-    padding:8px 9px;
+    padding:7px 8px;
     font-size:11px;
     white-space:nowrap;
+  }
+  .btn-history{padding:6px 7px;font-size:10px}
+  .icon-btn{
+    min-width:30px;
+    height:30px;
+    font-size:12px;
+  }
+  .card-actions,.table-actions,.stage-config-actions{
+    gap:6px;
+  }
+  .edit-btn,.delete-btn,.approve-btn,.reject-btn{
+    padding:6px 9px;
+    font-size:11px;
+  }
+  .stats-extended,
+  .report-grid-extended {
+    grid-template-columns: repeat(4, minmax(124px, 1fr));
   }
 }
 
 @media (max-height: 860px) and (min-width: 1101px) {
   :root{
-    --topbar-padding-top:10px;
-    --topbar-padding-bottom:10px;
-    --stats-margin-bottom:10px;
-    --stat-padding:12px;
-    --stat-value-size:22px;
+    --topbar-padding-top:8px;
+    --topbar-padding-bottom:8px;
+    --stats-margin-bottom:8px;
+    --stat-padding:10px;
+    --stat-label-size:11px;
+    --stat-value-size:20px;
   }
 
   .funil-sticky-head{
