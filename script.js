@@ -199,6 +199,50 @@
     });
   }
 
+  function parseMonetaryValue(value) {
+    if (value === null || value === undefined || value === "") return 0;
+
+    let normalized = String(value)
+      .trim()
+      .replace(/r\$\s*/gi, "")
+      .replace(/\s+/g, "")
+      .replace(/[^0-9,.-]/g, "");
+
+    if (!normalized) return 0;
+
+    const lastComma = normalized.lastIndexOf(",");
+    const lastDot = normalized.lastIndexOf(".");
+
+    if (lastComma >= 0 && lastDot >= 0) {
+      if (lastComma > lastDot) {
+        normalized = normalized.replace(/\./g, "").replace(",", ".");
+      } else {
+        normalized = normalized.replace(/,/g, "");
+      }
+    } else if (lastComma >= 0) {
+      normalized = normalized.replace(/\./g, "").replace(",", ".");
+    } else if ((normalized.match(/\./g) || []).length > 1) {
+      normalized = normalized.replace(/\./g, "");
+    } else if (lastDot >= 0) {
+      const decimalDigits = normalized.length - lastDot - 1;
+      if (decimalDigits === 3) {
+        normalized = normalized.replace(".", "");
+      }
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function formatPlanInputValue(value) {
+    if (value === null || value === undefined || value === "") return "";
+    return formatPlanValue(parseMonetaryValue(value));
+  }
+
+  function isNoPlanName(value) {
+    return String(value || "").trim().toLowerCase() === "sem plano";
+  }
+
   function isMissingRelationError(error) {
     const code = String(error?.code || "").toUpperCase();
     const message = String(error?.message || "").toLowerCase();
@@ -342,17 +386,7 @@
     return (Array.isArray(plans) ? plans : [])
       .map((item) => {
         const name = String(item?.name || "").trim();
-        const rawValue = item?.value;
-
-        let value = 0;
-        if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
-          const normalized = String(rawValue)
-            .replace(/r\$\s*/gi, "")
-            .replace(/\./g, "")
-            .replace(",", ".")
-            .replace(/[^0-9.-]/g, "");
-          value = Number(normalized || 0);
-        }
+        const value = parseMonetaryValue(item?.value);
 
         return {
           name,
@@ -860,10 +894,10 @@
   }
 
   function getLeadPlanValueText(lead) {
-    const plans = getLeadPlans(lead);
+    const plans = getLeadPlans(lead).filter((item) => !isNoPlanName(item.name));
     if (!plans.length) {
       const rawValue = Number(lead?.value || 0);
-      return rawValue > 0 ? formatPlanValue(rawValue) : "0";
+      return rawValue > 0 ? formatPlanValue(rawValue) : "Nao fechou ainda";
     }
 
     return plans.map((item) => `${item.name}: ${formatPlanValue(item.value || 0)}`).join(" | ");
@@ -886,7 +920,7 @@
             <option value="__custom__" ${getPlanSelectValue(item.name) === "__custom__" ? "selected" : ""}>Personalizar nome</option>
           </select>
           <input type="text" class="plan-name-input" placeholder="Nome do plano" list="planSuggestions" value="${escapeHtml(item.name || "")}" />
-          <input type="number" class="plan-value-input" placeholder="Valor do plano" min="0" step="0.01" value="${escapeHtml(item.value ?? "")}" />
+          <input type="text" class="plan-value-input" placeholder="Valor do plano" inputmode="decimal" value="${escapeHtml(formatPlanInputValue(item.value))}" />
         </div>
         <div class="plan-item-actions">
           <button type="button" class="btn btn-danger plan-remove-btn">Excluir</button>
@@ -1865,13 +1899,7 @@
   }
 
   function parseMoney(value) {
-    if (value === null || value === undefined || value === "") return 0;
-    const cleaned = String(value)
-      .replace(/r\$\s*/gi, "")
-      .replace(/\./g, "")
-      .replace(",", ".")
-      .replace(/[^0-9.-]/g, "");
-    return Number(cleaned || 0);
+    return parseMonetaryValue(value);
   }
 
   function downloadTextFile(filename, content, mimeType = "text/plain;charset=utf-8") {
