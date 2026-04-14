@@ -380,7 +380,7 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   padding-bottom:8px;
-  background:linear-gradient(180deg,rgba(8,18,13,.97),rgba(8,18,13,.92) 78%,rgba(8,18,13,0));
+  background:rgba(8,18,13,.98);
   backdrop-filter:blur(12px);
 }
 .stats-extended{
