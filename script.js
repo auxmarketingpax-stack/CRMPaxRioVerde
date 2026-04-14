@@ -693,6 +693,10 @@
     return window.matchMedia("(max-width: 700px)").matches;
   }
 
+  function isCompactViewport() {
+    return window.matchMedia("(max-width: 1100px)").matches;
+  }
+
   function setMobileFiltersOpen(shouldOpen) {
     if (!els.mobileFiltersPanel || !els.mobileFiltersBtn) return;
     els.mobileFiltersPanel.classList.toggle("hidden", !shouldOpen);
@@ -2843,6 +2847,7 @@
     });
 
     els.mobileMenuBtn?.addEventListener("click", () => {
+      setMobileFiltersOpen(false);
       els.sidebar.classList.toggle("open");
     });
 
@@ -2855,6 +2860,7 @@
     });
 
     els.mobileFiltersBtn?.addEventListener("click", () => {
+      els.sidebar?.classList.remove("open");
       setMobileFiltersOpen(els.mobileFiltersPanel?.classList.contains("hidden"));
     });
 
@@ -2893,7 +2899,7 @@
       if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target)) return;
       if (els.mobileFiltersBtn?.contains(e.target) || els.mobileFiltersPanel?.contains(e.target)) return;
       closeFilterDropdowns();
-      if (isMobileViewport()) setMobileFiltersOpen(false);
+      if (isCompactViewport()) setMobileFiltersOpen(false);
     });
 
     els.deleteSelectedBtn?.addEventListener("click", deleteSelectedLeads);
@@ -2948,7 +2954,7 @@
     setupObservationListEvents();
     attachPipelineScrollEvents();
     window.addEventListener("resize", () => {
-      if (!isMobileViewport()) setMobileFiltersOpen(false);
+      if (!isCompactViewport()) setMobileFiltersOpen(false);
       requestAnimationFrame(updateStickyLayout);
     });
 
