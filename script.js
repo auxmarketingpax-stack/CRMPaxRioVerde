@@ -674,11 +674,36 @@
     const mobileTopbarVisible = !!(els.mobileTopbar && window.getComputedStyle(els.mobileTopbar).display !== "none");
     const mobileTopbarHeight = mobileTopbarVisible ? els.mobileTopbar.offsetHeight : 0;
     const topbarHeight = els.topbar ? els.topbar.offsetHeight : 0;
+    const metricsHeight = els.metricsSection ? els.metricsSection.offsetHeight : 0;
+    const pipelineScrollbarHeight = els.pipelineScrollTop ? els.pipelineScrollTop.offsetHeight : 0;
 
     root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
     root.style.setProperty("--topbar-height", `${topbarHeight}px`);
     root.style.setProperty("--topbar-sticky-offset", `${mobileTopbarHeight}px`);
     root.style.setProperty("--metrics-sticky-offset", `${mobileTopbarHeight + topbarHeight + 12}px`);
+    root.style.setProperty("--pipeline-scrollbar-height", `${pipelineScrollbarHeight}px`);
+    root.style.setProperty("--pipeline-scrollbar-sticky-offset", `${mobileTopbarHeight + topbarHeight + metricsHeight + 20}px`);
+  }
+
+  function bindOverlayDismiss(overlay, closeFn) {
+    if (!overlay || typeof closeFn !== "function") return;
+
+    let startedOnBackdrop = false;
+
+    overlay.addEventListener("pointerdown", (event) => {
+      startedOnBackdrop = event.target === overlay;
+    });
+
+    overlay.addEventListener("pointercancel", () => {
+      startedOnBackdrop = false;
+    });
+
+    overlay.addEventListener("click", (event) => {
+      if (startedOnBackdrop && event.target === overlay) {
+        closeFn();
+      }
+      startedOnBackdrop = false;
+    });
   }
 
   function isPresetStageType(value) {
@@ -2791,17 +2816,9 @@
       await loadHistory(true);
     });
 
-    els.modalOverlay.addEventListener("click", (e) => {
-      if (e.target === els.modalOverlay) closeLeadModal();
-    });
-
-    els.stageModalOverlay.addEventListener("click", (e) => {
-      if (e.target === els.stageModalOverlay) closeStageModal();
-    });
-
-    els.historyModalOverlay.addEventListener("click", (e) => {
-      if (e.target === els.historyModalOverlay) closeHistoryModal();
-    });
+    bindOverlayDismiss(els.modalOverlay, closeLeadModal);
+    bindOverlayDismiss(els.stageModalOverlay, closeStageModal);
+    bindOverlayDismiss(els.historyModalOverlay, closeHistoryModal);
 
     state.supabase.auth.onAuthStateChange((event, session) => {
       window.setTimeout(() => {

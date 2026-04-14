@@ -17,6 +17,8 @@
   --topbar-height:0px;
   --topbar-sticky-offset:0px;
   --metrics-sticky-offset:0px;
+  --pipeline-scrollbar-height:0px;
+  --pipeline-scrollbar-sticky-offset:0px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -467,6 +469,15 @@ input:focus,select:focus,textarea:focus{
   display:flex;
   flex-direction:column;
   gap:10px;
+}
+
+#pipelineScrollTop{
+  position:sticky;
+  top:var(--pipeline-scrollbar-sticky-offset);
+  z-index:28;
+  background:linear-gradient(180deg,rgba(8,18,13,.96),rgba(8,18,13,.9));
+  backdrop-filter:blur(12px);
+  border-radius:12px;
 }
 
 .pipeline-scroll-area,
