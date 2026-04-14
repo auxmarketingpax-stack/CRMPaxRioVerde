@@ -239,8 +239,16 @@
     return formatPlanValue(parseMonetaryValue(value));
   }
 
+  function normalizePlanNameKey(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
   function isNoPlanName(value) {
-    return String(value || "").trim().toLowerCase() === "sem plano";
+    return normalizePlanNameKey(value) === "sem plano";
+  }
+
+  function getPlansTotalValue(plans) {
+    return cleanPlanList(plans).reduce((sum, item) => sum + Number(item.value || 0), 0);
   }
 
   function isMissingRelationError(error) {
@@ -503,7 +511,7 @@
 
   function normalizeLead(lead) {
     const meta = getLeadMeta(lead?.notes || "", lead?.value || 0);
-    const computedValue = cleanPlanList(meta.plans || []).reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const computedValue = getPlansTotalValue(meta.plans || []);
     return {
       ...lead,
       value: computedValue || Number(lead?.value || 0) || 0,
@@ -520,6 +528,19 @@
     const plans = getLeadPlans(lead);
     if (plans.length) return plans.map((item) => item.name).join(", ");
     return String(lead?._meta?.plan || "").trim();
+  }
+
+  function getLeadPlanDisplayText(lead) {
+    const plans = getLeadPlans(lead)
+      .map((item) => String(item?.name || "").trim())
+      .filter((name) => name && !isNoPlanName(name));
+
+    if (plans.length) return plans.join(", ");
+
+    const rawPlan = String(lead?._meta?.plan || "").trim();
+    if (rawPlan && !isNoPlanName(rawPlan)) return rawPlan;
+
+    return "Não fechou ainda";
   }
 
   function getLeadObservations(lead) {
@@ -897,10 +918,84 @@
     const plans = getLeadPlans(lead).filter((item) => !isNoPlanName(item.name));
     if (!plans.length) {
       const rawValue = Number(lead?.value || 0);
-      return rawValue > 0 ? formatPlanValue(rawValue) : "Nao fechou ainda";
+      return rawValue > 0 ? formatPlanValue(rawValue) : "Não fechou ainda";
     }
 
     return plans.map((item) => `${item.name}: ${formatPlanValue(item.value || 0)}`).join(" | ");
+  }
+
+  async function syncPlanValuesAcrossLeads(referencePlans, excludeLeadId = null) {
+    const targetPlans = cleanPlanList(referencePlans).filter((item) => !isNoPlanName(item.name));
+    if (!targetPlans.length) return 0;
+
+    const targetMap = new Map(
+      targetPlans.map((item) => [normalizePlanNameKey(item.name), Number(item.value || 0)])
+    );
+
+    const pendingUpdates = state.leads.reduce((acc, lead) => {
+      if (lead.id === excludeLeadId) return acc;
+
+      const currentPlans = getLeadPlans(lead);
+      if (!currentPlans.length) return acc;
+
+      let changed = false;
+      const nextPlans = currentPlans.map((item) => {
+        const key = normalizePlanNameKey(item.name);
+        if (!targetMap.has(key)) return item;
+
+        const nextValue = targetMap.get(key);
+        if (Number(item.value || 0) === nextValue) return item;
+
+        changed = true;
+        return { ...item, value: nextValue };
+      });
+
+      if (!changed) return acc;
+
+      const leadMeta = getLeadMeta(lead?.notes || "", lead?.value || 0);
+      acc.push({
+        id: lead.id,
+        name: lead.name,
+        payload: {
+          value: getPlansTotalValue(nextPlans),
+          notes: serializeLeadMeta({
+            ...leadMeta,
+            plans: nextPlans,
+            plan: nextPlans[0]?.name || leadMeta.plan || "",
+            legacyText: leadMeta.legacyText,
+            observations: leadMeta.observations
+          })
+        }
+      });
+      return acc;
+    }, []);
+
+    if (!pendingUpdates.length) return 0;
+
+    const results = await Promise.all(
+      pendingUpdates.map((item) =>
+        state.supabase
+          .from("leads")
+          .update(item.payload)
+          .eq("id", item.id)
+      )
+    );
+
+    const failed = results.find((result) => result.error);
+    if (failed?.error) throw failed.error;
+
+    await logChange(
+      "sync",
+      "lead",
+      excludeLeadId,
+      `${pendingUpdates.length} lead(s) tiveram o valor do plano sincronizado por ${getUserDisplayName()}.`,
+      {
+        plans: targetPlans,
+        affected_leads: pendingUpdates.map((item) => ({ id: item.id, name: item.name }))
+      }
+    );
+
+    return pendingUpdates.length;
   }
 
   function renderPlanItems() {
@@ -1502,7 +1597,6 @@
               <span><strong>Início:</strong> ${formatDate(lead.start_date)}</span>
               <span><strong>Origem:</strong> ${escapeHtml(lead.traffic_type || "-")}</span>
               <span><strong>Rede:</strong> ${escapeHtml(lead.social_source || "-")}</span>
-              <span><strong>Plano:</strong> ${escapeHtml(getLeadPlan(lead) || "-")}</span>
             </div>
 
             ${getLeadLatestObservation(lead) ? `<div class="card-notes"><strong>Ultima observacao:</strong> ${escapeHtml(getLeadLatestObservation(lead).text)}${getLeadLatestObservation(lead).date ? `<small>${formatDate(getLeadLatestObservation(lead).date)}</small>` : ""}</div>` : ""}
@@ -1627,7 +1721,7 @@
         <td>${formatDate(lead.start_date)}</td>
         <td>${escapeHtml(lead.social_source || "-")}</td>
         <td>${escapeHtml(lead.traffic_type || "-")}</td>
-        <td>${escapeHtml(getLeadPlan(lead) || "-")}</td>
+        <td>${escapeHtml(getLeadPlanDisplayText(lead))}</td>
         <td>${escapeHtml(getStageName(lead.stage_id))}</td>
         <td>
           <div class="table-actions">
@@ -2122,7 +2216,7 @@
     const existingLead = state.leads.find((lead) => lead.id === els.leadId.value) || null;
     const existingMeta = getLeadMeta(existingLead?.notes || "");
     const draftPlans = cleanPlanList(state.modalPlans.map((item) => ({ name: item.name, value: item.value })));
-    const leadValue = draftPlans.reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const leadValue = getPlansTotalValue(draftPlans);
     const draftObservations = cleanObservationList(state.modalObservations);
 
     const invalidPlan = state.modalPlans.find((item) => String(item?.name || "").trim() && String(item?.value || "").trim() === "");
@@ -2154,6 +2248,7 @@
     }
 
     let error;
+    let savedLeadId = els.leadId.value || null;
 
     if (els.leadId.value) {
       const oldLead = state.leads.find((x) => x.id === els.leadId.value);
@@ -2181,6 +2276,7 @@
 
       error = insertError;
       if (error) return alert(`Erro no Supabase: ${error.message}`);
+      savedLeadId = data?.id || null;
 
       await logChange(
         "insert",
@@ -2189,6 +2285,12 @@
         `Lead "${payload.name}" foi criado por ${getUserDisplayName()}.`,
         payload
       );
+    }
+
+    try {
+      await syncPlanValuesAcrossLeads(draftPlans, savedLeadId);
+    } catch (syncError) {
+      alert(`Lead salvo, mas não foi possível sincronizar o valor do plano nos outros leads: ${syncError.message}`);
     }
 
     closeLeadModal();
