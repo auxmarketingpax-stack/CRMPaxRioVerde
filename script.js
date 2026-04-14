@@ -761,6 +761,10 @@
     )].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
 
+  function normalizeStageTypeNameKey(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
   function getCustomStageTypes() {
     return sortStageTypeNames([
       ...state.customStageTypes,
@@ -811,6 +815,34 @@
     return true;
   }
 
+  async function renameCustomStageType(oldName, nextName) {
+    const previous = String(oldName || "").trim();
+    const next = String(nextName || "").trim();
+    if (!previous || !next || previous === next) return true;
+
+    const { error: updateError } = await state.supabase
+      .from("stages")
+      .update({ custom_stage_type: next })
+      .eq("custom_stage_type", previous);
+
+    if (updateError) {
+      console.error("Erro ao renomear tipo personalizado nas etapas:", updateError);
+      return false;
+    }
+
+    const saved = await saveCustomStageType(next);
+    if (!saved) return false;
+
+    const removed = await deleteCustomStageTypeFromCatalog(previous);
+    if (!removed) return false;
+
+    state.customStageTypes = persistCustomStageTypes(
+      state.customStageTypes.map((item) => (item === previous ? next : item))
+    );
+
+    return true;
+  }
+
   function refreshStageTypeOptions(selectedValue = "", customValue = "") {
     if (!els.stageType) return;
 
@@ -856,13 +888,17 @@
     const selectedOption = getSelectableStageTypeOptions(false).find((item) => item.value === selected);
     const selectedLabel = selectedOption?.label || stageTypeLabel(selected);
 
-    els.customStageTypeGroup.classList.toggle("hidden", !(isNewCustom || isExistingCustom));
+    const canEditCustom = isNewCustom || isExistingCustom;
+
+    els.customStageTypeGroup.classList.remove("hidden");
     if (els.customStageType) {
-      els.customStageType.disabled = false;
+      els.customStageType.disabled = !canEditCustom;
       if (isNewCustom) {
         els.customStageType.placeholder = "Criar um novo tipo";
-      } else {
+      } else if (isExistingCustom) {
         els.customStageType.placeholder = "Personalize o tipo selecionado";
+      } else {
+        els.customStageType.placeholder = "Este tipo padrao nao pode ser personalizado aqui";
       }
 
       if (isNewCustom) {
@@ -870,7 +906,7 @@
       } else if (isExistingCustom) {
         els.customStageType.value = selected.replace(/^custom:/, "");
       } else {
-        els.customStageType.value = "";
+        els.customStageType.value = selectedLabel;
       }
     }
     const canRemoveSelected = selected && selected !== "personalizado";
@@ -2351,21 +2387,20 @@
     event.preventDefault();
 
     const selectedType = String(els.stageType.value || "andamento").trim();
-    const selectedOption = getSelectableStageTypeOptions(false).find((item) => item.value === selectedType);
-    const selectedLabel = selectedOption?.label || stageTypeLabel(selectedType);
     const customStageTypeInput = String(els.customStageType?.value || "").trim();
-    const customStageType = selectedType.startsWith("custom:")
-      ? (customStageTypeInput || selectedType.replace(/^custom:/, ""))
-      : customStageTypeInput;
-    const shouldSaveAsCustom =
-      selectedType === "personalizado" ||
-      selectedType.startsWith("custom:") ||
-      (!!customStageType && customStageType !== selectedLabel);
+    const existingCustomType = selectedType.startsWith("custom:") ? selectedType.replace(/^custom:/, "") : "";
+    const isCreatingNewCustom = selectedType === "personalizado";
+    const isEditingExistingCustom = !!existingCustomType;
+    const desiredCustomType = isCreatingNewCustom
+      ? customStageTypeInput
+      : (isEditingExistingCustom ? (customStageTypeInput || existingCustomType) : "");
     const payload = {
       name: els.stageName.value.trim(),
       color: els.stageColor.value,
-      stage_type: shouldSaveAsCustom ? "personalizado" : (["andamento", "fechado", "cancelado", "espera"].includes(selectedType) ? selectedType : "andamento"),
-      custom_stage_type: shouldSaveAsCustom ? customStageType : null,
+      stage_type: (isCreatingNewCustom || isEditingExistingCustom)
+        ? "personalizado"
+        : (["andamento", "fechado", "cancelado", "espera"].includes(selectedType) ? selectedType : "andamento"),
+      custom_stage_type: (isCreatingNewCustom || isEditingExistingCustom) ? desiredCustomType : null,
       position: els.stageId.value ? (state.stages.find((s) => s.id === els.stageId.value)?.position ?? state.stages.length) : state.stages.length,
       created_by: state.currentUser.id
     };
@@ -2373,9 +2408,28 @@
     if (!payload.name) return alert("Informe o nome da etapa.");
     if (payload.stage_type === "personalizado" && !payload.custom_stage_type) return alert("Informe o tipo personalizado.");
 
-    if (payload.stage_type === "personalizado") {
+    if (false && payload.stage_type === "personalizado") {
       const savedType = await saveCustomStageType(payload.custom_stage_type);
       if (!savedType) return alert("Não foi possível salvar o novo tipo personalizado.");
+    }
+
+    const customTypes = getCustomStageTypes();
+    const duplicateCustom = customTypes.find((item) =>
+      normalizeStageTypeNameKey(item) === normalizeStageTypeNameKey(payload.custom_stage_type) &&
+      normalizeStageTypeNameKey(item) !== normalizeStageTypeNameKey(existingCustomType)
+    );
+
+    if (isCreatingNewCustom && duplicateCustom) {
+      return alert("Esse tipo personalizado ja existe. Selecione-o na lista para editar.");
+    }
+
+    if (isEditingExistingCustom && desiredCustomType !== existingCustomType) {
+      if (duplicateCustom) return alert("Ja existe outro tipo com esse nome. Selecione-o na lista para editar.");
+      const renamed = await renameCustomStageType(existingCustomType, desiredCustomType);
+      if (!renamed) return alert("Nao foi possivel atualizar o tipo personalizado.");
+    } else if (isCreatingNewCustom) {
+      const savedType = await saveCustomStageType(payload.custom_stage_type);
+      if (!savedType) return alert("Nao foi possivel salvar o novo tipo personalizado.");
     }
 
     if (els.stageId.value) {
