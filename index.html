@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
-  <link rel="stylesheet" href="style.css?v=20260414-14" />
+  <link rel="stylesheet" href="style.css?v=20260414-15" />
 </head>
 <body>
   <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
@@ -61,8 +61,17 @@
 
   <section id="appScreen" class="screen hidden">
     <div class="mobile-topbar">
+      <div class="mobile-topbar-main">
       <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Abrir menu">☰</button>
-      <div><strong id="mobileOrgName">CRM Pax</strong></div>
+      <div class="mobile-brand-block"><strong id="mobileOrgName">CRM Pax</strong></div>
+      </div>
+      <nav class="mobile-nav" aria-label="Menu principal no celular">
+        <button class="menu-item mobile-nav-item active" data-view="funil" type="button">Funil</button>
+        <button class="menu-item mobile-nav-item" data-view="leads" type="button">Leads</button>
+        <button class="menu-item mobile-nav-item" data-view="relatorios" type="button">Relatórios</button>
+        <button class="menu-item mobile-nav-item" data-view="equipe" type="button">Equipe</button>
+        <button class="menu-item mobile-nav-item" data-view="configuracoes" type="button">Config.</button>
+      </nav>
     </div>
 
     <div class="app">
@@ -98,9 +107,9 @@
           </div>
 
           <div class="topbar-actions">
-            <input type="text" id="searchInput" placeholder="Buscar cliente, contato, rede social..." />
+            <input type="text" id="searchInput" class="mobile-hidden-control" placeholder="Buscar cliente, contato, rede social..." />
 
-            <div class="filter-dropdown" id="ownerFilterDropdown">
+            <div class="filter-dropdown mobile-hidden-control" id="ownerFilterDropdown">
               <button type="button" class="filter-btn" id="ownerFilterBtn" aria-haspopup="listbox" aria-expanded="false">
                 <span class="filter-btn-label" id="ownerFilterLabel">Todos os responsáveis</span>
                 <span class="filter-btn-arrow">▾</span>
@@ -111,7 +120,7 @@
               </select>
             </div>
 
-            <div class="filter-dropdown" id="monthFilterDropdown">
+            <div class="filter-dropdown mobile-hidden-control" id="monthFilterDropdown">
               <button type="button" class="filter-btn" id="monthFilterBtn" aria-haspopup="listbox" aria-expanded="false">
                 <span class="filter-btn-label" id="monthFilterLabel">Todos os meses</span>
                 <span class="filter-btn-arrow">▾</span>
@@ -122,13 +131,33 @@
               </select>
             </div>
 
-            <button type="button" id="importCsvBtn" class="btn btn-secondary">Importar CSV</button>
-            <button type="button" id="exportCsvBtn" class="btn btn-secondary">Exportar CSV</button>
+            <button type="button" id="mobileFiltersBtn" class="btn btn-secondary mobile-only">Filtros</button>
+            <button type="button" id="importCsvBtn" class="btn btn-secondary mobile-hidden-control">Importar CSV</button>
+            <button type="button" id="exportCsvBtn" class="btn btn-secondary mobile-hidden-control">Exportar CSV</button>
             <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden" />
             <button type="button" id="deleteSelectedBtn" class="btn btn-danger hidden">Excluir selecionados</button>
             <button type="button" id="historyBtn" class="btn btn-history">Histórico</button>
             <button type="button" id="addLeadBtn" class="btn btn-primary">+ Novo Lead</button>
             <button type="button" id="addStageBtn" class="btn btn-secondary">+ Pipeline</button>
+          </div>
+          <div id="mobileFiltersPanel" class="mobile-filters-panel hidden">
+            <div class="mobile-filters-grid">
+              <div class="form-group">
+                <label for="mobileOwnerFilter">Responsável</label>
+                <select id="mobileOwnerFilter">
+                  <option value="">Todos os responsáveis</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="mobileMonthFilter">Mês</label>
+                <select id="mobileMonthFilter">
+                  <option value="">Todos os meses</option>
+                </select>
+              </div>
+            </div>
+            <div class="mobile-filters-actions">
+              <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
+            </div>
           </div>
         </header>
 
@@ -188,6 +217,9 @@
             <div class="panel-header"><h3>Relatórios</h3></div>
 
             <div class="report-grid report-grid-extended">
+              <div class="report-card"><span>Total de leads</span><strong id="reportTotalLeads">0</strong></div>
+              <div class="report-card"><span>Fechados</span><strong id="reportClosedDeals">0</strong></div>
+              <div class="report-card"><span>Conversão</span><strong id="reportConversionRate">0%</strong></div>
               <div class="report-card"><span>Receita fechada</span><strong id="reportClosedValue">R$ 0,00</strong></div>
               <div class="report-card"><span>Ticket médio fechado</span><strong id="reportAvgTicket">R$ 0,00</strong></div>
               <div class="report-card"><span>Leads pagos</span><strong id="reportPaidCount">0</strong></div>
@@ -416,7 +448,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260414-14"></script>
-  <script src="script.js?v=20260414-14"></script>
+  <script src="config.js?v=20260414-15"></script>
+  <script src="script.js?v=20260414-15"></script>
 </body>
 </html>

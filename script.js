@@ -25,6 +25,11 @@
     pageSubtitle: $("pageSubtitle"),
 
     searchInput: $("searchInput"),
+    mobileFiltersBtn: $("mobileFiltersBtn"),
+    mobileFiltersPanel: $("mobileFiltersPanel"),
+    mobileOwnerFilter: $("mobileOwnerFilter"),
+    mobileMonthFilter: $("mobileMonthFilter"),
+    mobileClearFiltersBtn: $("mobileClearFiltersBtn"),
     ownerFilterDropdown: $("ownerFilterDropdown"),
     ownerFilterBtn: $("ownerFilterBtn"),
     ownerFilterMenu: $("ownerFilterMenu"),
@@ -64,6 +69,9 @@
     funilStickyHead: $("funilStickyHead"),
 
     reportClosedValue: $("reportClosedValue"),
+    reportTotalLeads: $("reportTotalLeads"),
+    reportClosedDeals: $("reportClosedDeals"),
+    reportConversionRate: $("reportConversionRate"),
     reportPaidCount: $("reportPaidCount"),
     reportOrganicCount: $("reportOrganicCount"),
     reportAvgTicket: $("reportAvgTicket"),
@@ -679,6 +687,23 @@
         renderAll();
       });
     });
+  }
+
+  function isMobileViewport() {
+    return window.matchMedia("(max-width: 700px)").matches;
+  }
+
+  function setMobileFiltersOpen(shouldOpen) {
+    if (!els.mobileFiltersPanel || !els.mobileFiltersBtn) return;
+    els.mobileFiltersPanel.classList.toggle("hidden", !shouldOpen);
+    els.mobileFiltersBtn.textContent = shouldOpen ? "Fechar filtros" : "Filtros";
+    els.mobileFiltersBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    requestAnimationFrame(updateStickyLayout);
+  }
+
+  function syncMobileFilterControls() {
+    if (els.mobileOwnerFilter) els.mobileOwnerFilter.value = els.ownerFilter?.value || "";
+    if (els.mobileMonthFilter) els.mobileMonthFilter.value = els.monthFilter?.value || "";
   }
 
   function stageTypeLabel(type, customStageType = "") {
@@ -1569,6 +1594,18 @@
       '<option value="">Todos os meses</option>' +
       months.map((m) => `<option value="${m}">${formatMonthLabel(m)}</option>`).join("");
 
+    if (els.mobileOwnerFilter) {
+      els.mobileOwnerFilter.innerHTML =
+        '<option value="">Todos os responsáveis</option>' +
+        owners.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+    }
+
+    if (els.mobileMonthFilter) {
+      els.mobileMonthFilter.innerHTML =
+        '<option value="">Todos os meses</option>' +
+        months.map((m) => `<option value="${m}">${formatMonthLabel(m)}</option>`).join("");
+    }
+
     els.stage.innerHTML = state.stages
       .map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
       .join("");
@@ -1577,6 +1614,7 @@
 
     els.ownerFilter.value = owners.includes(currentOwner) ? currentOwner : "";
     els.monthFilter.value = months.includes(currentMonth) ? currentMonth : "";
+    syncMobileFilterControls();
 
     renderFilterOptions(
       els.ownerFilter,
@@ -1661,10 +1699,13 @@
     els.paidRate.textContent = metrics.paidCount;
     if (els.organicLeads) els.organicLeads.textContent = metrics.organicCount;
 
+    if (els.reportTotalLeads) els.reportTotalLeads.textContent = metrics.total;
     els.reportClosedValue.textContent = brMoney(metrics.totalValue);
+    if (els.reportClosedDeals) els.reportClosedDeals.textContent = metrics.closed;
     els.reportPaidCount.textContent = metrics.paidCount;
     els.reportOrganicCount.textContent = metrics.organicCount;
     els.reportAvgTicket.textContent = brMoney(metrics.avgTicket);
+    if (els.reportConversionRate) els.reportConversionRate.textContent = `${metrics.conversion.toFixed(1)}%`;
     els.reportTopOwner.textContent = metrics.topOwner?.[0] || "-";
     els.reportTopStage.textContent = metrics.topStage?.name || "-";
     els.reportBestMonth.textContent = metrics.bestMonth?.[0] ? formatMonthLabel(metrics.bestMonth[0]) : "-";
@@ -2641,6 +2682,7 @@
     els.pageTitle.textContent = titles[name][0];
     els.pageSubtitle.textContent = titles[name][1];
     els.sidebar.classList.remove("open");
+    setMobileFiltersOpen(false);
     requestAnimationFrame(updateStickyLayout);
 
     if (name === "relatorios") {
@@ -2799,7 +2841,7 @@
       showScreen("authScreen");
     });
 
-    els.mobileMenuBtn.addEventListener("click", () => {
+    els.mobileMenuBtn?.addEventListener("click", () => {
       els.sidebar.classList.toggle("open");
     });
 
@@ -2808,6 +2850,27 @@
     });
 
     els.searchInput.addEventListener("input", () => {
+      renderAll();
+    });
+
+    els.mobileFiltersBtn?.addEventListener("click", () => {
+      setMobileFiltersOpen(els.mobileFiltersPanel?.classList.contains("hidden"));
+    });
+
+    els.mobileOwnerFilter?.addEventListener("change", () => {
+      if (els.ownerFilter) els.ownerFilter.value = els.mobileOwnerFilter.value;
+      renderAll();
+    });
+
+    els.mobileMonthFilter?.addEventListener("change", () => {
+      if (els.monthFilter) els.monthFilter.value = els.mobileMonthFilter.value;
+      renderAll();
+    });
+
+    els.mobileClearFiltersBtn?.addEventListener("click", () => {
+      if (els.ownerFilter) els.ownerFilter.value = "";
+      if (els.monthFilter) els.monthFilter.value = "";
+      syncMobileFilterControls();
       renderAll();
     });
 
@@ -2827,7 +2890,9 @@
 
     document.addEventListener("click", (e) => {
       if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target)) return;
+      if (els.mobileFiltersBtn?.contains(e.target) || els.mobileFiltersPanel?.contains(e.target)) return;
       closeFilterDropdowns();
+      if (isMobileViewport()) setMobileFiltersOpen(false);
     });
 
     els.deleteSelectedBtn?.addEventListener("click", deleteSelectedLeads);
@@ -2881,7 +2946,10 @@
     setupPlanListEvents();
     setupObservationListEvents();
     attachPipelineScrollEvents();
-    window.addEventListener("resize", () => requestAnimationFrame(updateStickyLayout));
+    window.addEventListener("resize", () => {
+      if (!isMobileViewport()) setMobileFiltersOpen(false);
+      requestAnimationFrame(updateStickyLayout);
+    });
 
     document.addEventListener("click", (event) => {
       const leadBtn = event.target.closest("[data-action]");
