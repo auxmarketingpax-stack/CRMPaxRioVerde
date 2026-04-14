@@ -188,6 +188,33 @@
     [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay].forEach((overlay) => {
       overlay?.classList.add("hidden");
     });
+    document.body.classList.remove("modal-open");
+  }
+
+  function openModalOverlay(overlay, focusSelector = null) {
+    if (!overlay) return;
+    overlay.classList.remove("hidden");
+    overlay.scrollTop = 0;
+    document.body.classList.add("modal-open");
+
+    const modal = overlay.querySelector(".modal");
+    if (modal) {
+      modal.scrollTop = 0;
+      requestAnimationFrame(() => {
+        modal.scrollIntoView({ block: "start", inline: "nearest" });
+        const focusTarget = focusSelector ? modal.querySelector(focusSelector) : null;
+        focusTarget?.focus?.({ preventScroll: true });
+      });
+    }
+  }
+
+  function closeModalOverlay(overlay) {
+    if (!overlay) return;
+    overlay.classList.add("hidden");
+    overlay.scrollTop = 0;
+    const hasOpenOverlay = [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay]
+      .some((item) => item && !item.classList.contains("hidden"));
+    if (!hasOpenOverlay) document.body.classList.remove("modal-open");
   }
 
   function brMoney(value) {
@@ -2241,11 +2268,11 @@
     renderPlanItems();
     renderObservationItems();
 
-    els.modalOverlay.classList.remove("hidden");
+    openModalOverlay(els.modalOverlay, "#name");
   }
 
   function closeLeadModal() {
-    els.modalOverlay.classList.add("hidden");
+    closeModalOverlay(els.modalOverlay);
   }
 
   function openStageModal(stage = null) {
@@ -2258,23 +2285,23 @@
     els.stageColor.value = stage?.color || "#1f9d55";
     refreshStageTypeOptions(stage?.custom_stage_type ? `custom:${stage.custom_stage_type}` : (stage?.stage_type || "andamento"), stage?.custom_stage_type || "");
     updateStageColorPreview(els.stageColor.value);
-    els.stageModalOverlay.classList.remove("hidden");
+    openModalOverlay(els.stageModalOverlay, "#stageName");
   }
 
   function closeStageModal() {
-    els.stageModalOverlay.classList.add("hidden");
+    closeModalOverlay(els.stageModalOverlay);
   }
 
   async function openHistoryModal() {
     closeAllModals();
     els.historyText.textContent = state.historyLoaded ? els.historyText.textContent : "Carregando histórico...";
     renderHistoryText();
-    els.historyModalOverlay.classList.remove("hidden");
+    openModalOverlay(els.historyModalOverlay);
     await loadHistory();
   }
 
   function closeHistoryModal() {
-    els.historyModalOverlay.classList.add("hidden");
+    closeModalOverlay(els.historyModalOverlay);
   }
 
   async function logChange(action, entityType, entityId, description, payload = null) {
