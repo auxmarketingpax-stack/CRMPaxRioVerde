@@ -487,6 +487,11 @@ input:focus,select:focus,textarea:focus{
 .main > #mobileFiltersPanel{
   display:none!important;
 }
+#appScreen > #mobileFiltersPanel{
+  position:fixed;
+  right:12px;
+  z-index:60;
+}
 .mobile-filters-panel label{
   font-size:13px;
   color:#dff2e5;
@@ -1018,10 +1023,8 @@ input:focus,select:focus,textarea:focus{
   #addStageBtn{
     display:none!important;
   }
-  .mobile-filters-panel{
-    position:fixed;
+  #appScreen > #mobileFiltersPanel{
     top:calc(var(--mobile-topbar-height) + 8px);
-    right:12px;
     width:min(236px, calc(100vw - 24px));
     max-height:calc(100vh - var(--mobile-topbar-height) - 20px);
     margin-top:0;
@@ -1029,11 +1032,19 @@ input:focus,select:focus,textarea:focus{
     overflow:auto;
     z-index:60;
   }
-  .mobile-filters-grid{
+  #appScreen > #mobileFiltersPanel .mobile-filters-grid{
     grid-template-columns:1fr;
   }
   #pipelineScrollTop{
     top:calc(var(--mobile-topbar-height) + var(--topbar-height) + 4px);
+  }
+  .card-actions,.table-actions,.stage-config-actions{
+    gap:6px;
+  }
+  .edit-btn,.delete-btn,.approve-btn,.reject-btn{
+    padding:7px 10px;
+    font-size:12px;
+    border-radius:9px;
   }
 }
 
@@ -1051,13 +1062,24 @@ input:focus,select:focus,textarea:focus{
   .main{
     padding:16px 12px 24px;
   }
-  .mobile-filters-panel{
+  #appScreen > #mobileFiltersPanel{
     top:calc(var(--mobile-topbar-height) + 8px);
     width:min(220px, calc(100vw - 24px));
     padding:12px;
   }
+  #appScreen > #mobileFiltersPanel .mobile-filters-grid{
+    grid-template-columns:1fr!important;
+  }
   .mobile-topbar{
     gap:0;
+  }
+  .card-actions,.table-actions,.stage-config-actions{
+    gap:6px;
+  }
+  .edit-btn,.delete-btn,.approve-btn,.reject-btn{
+    padding:6px 9px;
+    font-size:12px;
+    border-radius:8px;
   }
   .sidebar .brand,
   .sidebar-footer p{

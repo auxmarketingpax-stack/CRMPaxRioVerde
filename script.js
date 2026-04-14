@@ -711,6 +711,17 @@
     if (els.mobileMonthFilter) els.mobileMonthFilter.value = els.monthFilter?.value || "";
   }
 
+  function normalizeMobileFilterTexts() {
+    const topPanel = document.querySelector('#appScreen > #mobileFiltersPanel');
+    topPanel?.querySelector('label[for="mobileOwnerFilter"]')?.replaceChildren("Responsável");
+    topPanel?.querySelector('label[for="mobileMonthFilter"]')?.replaceChildren("Mês");
+
+    const ownerDefault = topPanel?.querySelector('#mobileOwnerFilter option[value=""]');
+    const monthDefault = topPanel?.querySelector('#mobileMonthFilter option[value=""]');
+    if (ownerDefault) ownerDefault.textContent = "Todos os responsáveis";
+    if (monthDefault) monthDefault.textContent = "Todos os meses";
+  }
+
   function stageTypeLabel(type, customStageType = "") {
     const customLabel = String(customStageType || "").trim();
     if (type === "personalizado" && customLabel) return customLabel;
@@ -2774,6 +2785,8 @@
   }
 
   function bindEvents() {
+    normalizeMobileFilterTexts();
+
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
