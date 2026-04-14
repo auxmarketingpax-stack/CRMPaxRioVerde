@@ -700,7 +700,7 @@
   function setMobileFiltersOpen(shouldOpen) {
     if (!els.mobileFiltersPanel || !els.mobileFiltersBtn) return;
     els.mobileFiltersPanel.classList.toggle("hidden", !shouldOpen);
-    els.mobileFiltersBtn.textContent = shouldOpen ? "×" : "⌕";
+    els.mobileFiltersBtn.classList.toggle("is-open", shouldOpen);
     els.mobileFiltersBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
     els.mobileFiltersBtn.setAttribute("aria-label", shouldOpen ? "Fechar filtros" : "Abrir filtros");
     requestAnimationFrame(updateStickyLayout);
