@@ -1014,9 +1014,9 @@ input:focus,select:focus,textarea:focus{
   }
   .mobile-filters-panel{
     position:fixed;
-    top:calc(var(--mobile-topbar-height) + 4px);
+    top:calc(var(--mobile-topbar-height) + 8px);
     right:12px;
-    width:min(232px, calc(100vw - 24px));
+    width:min(236px, calc(100vw - 24px));
     max-height:calc(100vh - var(--mobile-topbar-height) - 20px);
     margin-top:0;
     padding:12px;
@@ -1039,11 +1039,14 @@ input:focus,select:focus,textarea:focus{
   #addStageBtn{
     display:none!important;
   }
+  .topbar{
+    display:none;
+  }
   .main{
     padding:16px 12px 24px;
   }
   .mobile-filters-panel{
-    top:calc(var(--mobile-topbar-height) + 4px);
+    top:calc(var(--mobile-topbar-height) + 8px);
     width:min(220px, calc(100vw - 24px));
     padding:12px;
   }
@@ -1131,10 +1134,15 @@ input:focus,select:focus,textarea:focus{
 }
 
 @media (max-width: 1200px) {
-  .stats-extended,
-  .report-grid-extended,
   .charts-grid-extended {
     grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (min-width: 1101px) and (max-width: 1200px) {
+  .stats-extended,
+  .report-grid-extended {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
