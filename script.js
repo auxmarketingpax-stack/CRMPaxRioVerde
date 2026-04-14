@@ -682,9 +682,9 @@
     root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
     root.style.setProperty("--topbar-height", `${topbarHeight}px`);
     root.style.setProperty("--topbar-sticky-offset", `${mobileTopbarHeight}px`);
-    root.style.setProperty("--metrics-sticky-offset", `${mobileTopbarHeight + topbarHeight + 12}px`);
+    root.style.setProperty("--metrics-sticky-offset", `${mobileTopbarHeight + topbarHeight}px`);
     root.style.setProperty("--pipeline-scrollbar-height", `${pipelineScrollbarHeight}px`);
-    root.style.setProperty("--pipeline-scrollbar-sticky-offset", `${mobileTopbarHeight + topbarHeight + metricsHeight + 20}px`);
+    root.style.setProperty("--pipeline-scrollbar-sticky-offset", `${mobileTopbarHeight + topbarHeight + metricsHeight + 8}px`);
     root.style.setProperty("--funil-sticky-height", `${funilStickyHeight}px`);
   }
 

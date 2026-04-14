@@ -333,14 +333,15 @@ input:focus,select:focus,textarea:focus{
   padding:24px;
   overflow:visible;
   min-width:0;
-  max-width:100%
+  max-width:100%;
+  background:#08120d
 }
 .topbar{
   display:flex;
   justify-content:space-between;
   gap:18px;
   align-items:flex-start;
-  margin-bottom:24px;
+  margin-bottom:0;
   flex-wrap:wrap;
   position:sticky;
   top:var(--topbar-sticky-offset);
@@ -379,6 +380,7 @@ input:focus,select:focus,textarea:focus{
   z-index:34;
   width:100%;
   max-width:100%;
+  padding-top:8px;
   padding-bottom:8px;
   background:#08120d;
   backdrop-filter:blur(12px);
