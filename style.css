@@ -20,6 +20,29 @@
   --pipeline-scrollbar-height:0px;
   --pipeline-scrollbar-sticky-offset:0px;
   --funil-sticky-height:0px;
+  --sidebar-width:260px;
+  --sidebar-padding-y:24px;
+  --sidebar-padding-x:18px;
+  --main-padding:24px;
+  --topbar-title-size:28px;
+  --topbar-subtitle-size:16px;
+  --topbar-padding-top:16px;
+  --topbar-padding-bottom:18px;
+  --control-min-width:220px;
+  --stats-gap:16px;
+  --stats-margin-bottom:22px;
+  --stat-padding:18px;
+  --stat-label-size:14px;
+  --stat-value-size:28px;
+  --pipeline-column-width:360px;
+  --pipeline-gap:18px;
+  --column-header-padding:16px;
+  --column-body-padding:14px;
+  --column-title-size:16px;
+  --card-padding:14px;
+  --card-title-size:16px;
+  --card-text-size:13px;
+  --badge-font-size:12px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -240,14 +263,14 @@ input:focus,select:focus,textarea:focus{
 
 .app{
   display:grid;
-  grid-template-columns:260px 1fr;
+  grid-template-columns:var(--sidebar-width) 1fr;
   min-height:100vh;
   min-width:0
 }
 .sidebar{
   background:rgba(15,31,23,.95);
   border-right:1px solid var(--border);
-  padding:24px 18px;
+  padding:var(--sidebar-padding-y) var(--sidebar-padding-x);
   display:flex;
   flex-direction:column;
   gap:24px;
@@ -296,7 +319,7 @@ input:focus,select:focus,textarea:focus{
 
 .filter-dropdown{
   position:relative;
-  min-width:220px;
+  min-width:var(--control-min-width);
 }
 
 .filter-btn{
@@ -408,7 +431,7 @@ input:focus,select:focus,textarea:focus{
 }
 
 .main{
-  padding:24px;
+  padding:var(--main-padding);
   overflow:visible;
   min-width:0;
   max-width:100%;
@@ -424,12 +447,12 @@ input:focus,select:focus,textarea:focus{
   position:sticky;
   top:var(--topbar-sticky-offset);
   z-index:45;
-  padding:16px 0 18px;
+  padding:var(--topbar-padding-top) 0 var(--topbar-padding-bottom);
   background:#08120d;
   backdrop-filter:blur(12px)
 }
-.topbar h2{font-size:28px;margin-bottom:6px}
-.topbar p{color:var(--muted)}
+.topbar h2{font-size:var(--topbar-title-size);margin-bottom:6px}
+.topbar p{color:var(--muted);font-size:var(--topbar-subtitle-size)}
 .topbar-actions{
   display:flex;
   gap:12px;
@@ -458,8 +481,8 @@ input:focus,select:focus,textarea:focus{
   display:flex;
   justify-content:flex-end;
 }
-.topbar-actions input{min-width:220px}
-.topbar-actions .filter-dropdown{min-width:220px}
+.topbar-actions input{min-width:var(--control-min-width)}
+.topbar-actions .filter-dropdown{min-width:var(--control-min-width)}
 
 .view{display:none}
 .active-view{
@@ -470,8 +493,8 @@ input:focus,select:focus,textarea:focus{
 .stats{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:16px;
-  margin-bottom:22px
+  gap:var(--stats-gap);
+  margin-bottom:var(--stats-margin-bottom)
 }
 .funil-sticky-head{
   position:sticky;
@@ -500,27 +523,27 @@ input:focus,select:focus,textarea:focus{
   border-radius:var(--radius);
   box-shadow:var(--shadow)
 }
-.stat-card,.report-card{padding:18px}
+.stat-card,.report-card{padding:var(--stat-padding)}
 .stat-card span,.report-card span{
   display:block;
   color:var(--muted);
   margin-bottom:10px;
-  font-size:14px
+  font-size:var(--stat-label-size)
 }
-.stat-card strong,.report-card strong{font-size:28px}
+.stat-card strong,.report-card strong{font-size:var(--stat-value-size)}
 
 .pipeline{
   display:grid;
   grid-auto-flow:column;
-  grid-auto-columns:minmax(360px, 360px);
-  gap:18px;
+  grid-auto-columns:minmax(var(--pipeline-column-width), var(--pipeline-column-width));
+  gap:var(--pipeline-gap);
   align-items:start;
   width:max-content;
   min-width:max-content;
   padding-bottom:6px
 }
 .column{
-  width:360px;
+  width:var(--pipeline-column-width);
   background:rgba(15,31,23,.85);
   border:1px solid var(--border);
   border-radius:var(--radius);
@@ -530,25 +553,25 @@ input:focus,select:focus,textarea:focus{
   box-shadow:var(--shadow)
 }
 .column-header{
-  padding:16px;
+  padding:var(--column-header-padding);
   border-bottom:1px solid var(--border);
   display:flex;
   justify-content:space-between;
   gap:12px;
   align-items:center
 }
-.column-title h3{font-size:16px;margin-bottom:5px}
+.column-title h3{font-size:var(--column-title-size);margin-bottom:5px}
 .column-title span{font-size:12px;color:var(--muted)}
 .badge{
   background:rgba(31,157,85,.18);
   color:#9ef0be;
   padding:6px 10px;
   border-radius:6px;
-  font-size:12px;
+  font-size:var(--badge-font-size);
   font-weight:700
 }
 .column-body{
-  padding:14px;
+  padding:var(--column-body-padding);
   display:flex;
   flex-direction:column;
   gap:12px;
@@ -560,7 +583,7 @@ input:focus,select:focus,textarea:focus{
   background:rgba(255,255,255,.05);
   border:1px solid var(--border);
   border-radius:14px;
-  padding:14px;
+  padding:var(--card-padding);
   cursor:grab
 }
 .card.dragging{opacity:.5}
@@ -571,9 +594,9 @@ input:focus,select:focus,textarea:focus{
   align-items:flex-start;
   margin-bottom:10px
 }
-.card-title{font-size:16px;font-weight:700;margin-bottom:4px}
-.card-value{font-size:13px;font-weight:700;color:#9ef0be;line-height:1.5;max-width:260px;white-space:normal}
-.card-meta,.card-notes{font-size:13px}
+.card-title{font-size:var(--card-title-size);font-weight:700;margin-bottom:4px}
+.card-value{font-size:var(--card-text-size);font-weight:700;color:#9ef0be;line-height:1.5;max-width:260px;white-space:normal}
+.card-meta,.card-notes{font-size:var(--card-text-size)}
 .card-meta{
   display:grid;
   gap:6px;
@@ -1345,6 +1368,130 @@ input[type="color"]::-moz-color-swatch {
 
 .observation-item-header input[type="date"]{max-width:190px}
 .observation-item textarea{min-height:96px;resize:vertical}
+
+@media (max-width: 1680px) and (min-width: 1101px) {
+  :root{
+    --sidebar-width:236px;
+    --sidebar-padding-y:20px;
+    --sidebar-padding-x:16px;
+    --main-padding:20px;
+    --topbar-title-size:26px;
+    --topbar-subtitle-size:15px;
+    --control-min-width:198px;
+    --stats-gap:14px;
+    --stats-margin-bottom:18px;
+    --stat-padding:16px;
+    --stat-value-size:26px;
+    --pipeline-column-width:336px;
+    --pipeline-gap:16px;
+    --column-header-padding:14px;
+  }
+
+  .brand h1{font-size:20px}
+  .menu-item{padding:11px 13px}
+  .topbar-actions{gap:10px;row-gap:12px}
+  .btn{padding:11px 14px}
+}
+
+@media (max-width: 1440px) and (min-width: 1101px) {
+  :root{
+    --sidebar-width:220px;
+    --sidebar-padding-y:18px;
+    --sidebar-padding-x:14px;
+    --main-padding:16px;
+    --topbar-title-size:24px;
+    --topbar-subtitle-size:14px;
+    --topbar-padding-top:12px;
+    --topbar-padding-bottom:14px;
+    --control-min-width:174px;
+    --stats-gap:12px;
+    --stats-margin-bottom:14px;
+    --stat-padding:14px;
+    --stat-label-size:13px;
+    --stat-value-size:24px;
+    --pipeline-column-width:308px;
+    --pipeline-gap:14px;
+    --column-header-padding:13px;
+    --column-body-padding:12px;
+    --column-title-size:15px;
+    --card-padding:12px;
+    --card-title-size:15px;
+    --card-text-size:12px;
+    --badge-font-size:11px;
+  }
+
+  .brand-logo{
+    width:74px;
+    height:56px;
+    padding:8px;
+  }
+  .brand h1{font-size:18px}
+  .brand p{font-size:12px}
+  .topbar-actions{gap:8px;row-gap:10px}
+  .btn{padding:10px 12px}
+  .btn-history{padding:8px 10px;font-size:12px}
+  .icon-btn{
+    min-width:34px;
+    height:34px;
+  }
+  .card-value{max-width:220px}
+}
+
+@media (max-width: 1280px) and (min-width: 1101px) {
+  :root{
+    --sidebar-width:204px;
+    --main-padding:14px;
+    --topbar-title-size:22px;
+    --topbar-subtitle-size:13px;
+    --control-min-width:156px;
+    --stats-gap:10px;
+    --stats-margin-bottom:12px;
+    --stat-padding:12px;
+    --stat-label-size:12px;
+    --stat-value-size:22px;
+    --pipeline-column-width:284px;
+    --pipeline-gap:12px;
+    --column-header-padding:12px;
+    --column-body-padding:11px;
+    --column-title-size:14px;
+    --card-padding:11px;
+    --card-title-size:14px;
+    --card-text-size:12px;
+  }
+
+  .brand-logo{
+    width:66px;
+    height:50px;
+  }
+  .menu-item{padding:10px 11px;font-size:14px}
+  .topbar-actions input,
+  .topbar-actions .filter-dropdown{
+    min-width:156px;
+  }
+  .filter-btn{
+    min-height:40px;
+    padding:10px 12px;
+  }
+}
+
+@media (max-height: 860px) and (min-width: 1101px) {
+  :root{
+    --topbar-padding-top:10px;
+    --topbar-padding-bottom:10px;
+    --stats-margin-bottom:10px;
+    --stat-padding:12px;
+    --stat-value-size:22px;
+  }
+
+  .funil-sticky-head{
+    padding-top:4px;
+    padding-bottom:4px;
+  }
+
+  .stats-extended{
+    padding-bottom:2px;
+  }
+}
 
 @media(max-width:700px){
   .mobile-topbar{padding:10px 12px;}
