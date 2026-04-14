@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
-  <link rel="stylesheet" href="style.css?v=20260414-27" />
+  <link rel="stylesheet" href="style.css?v=20260414-28" />
 </head>
 <body>
   <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
@@ -140,26 +140,27 @@
             <button type="button" id="addLeadBtn" class="btn btn-primary">+ Novo Lead</button>
             <button type="button" id="addStageBtn" class="btn btn-secondary">+ Pipeline</button>
           </div>
-          <div id="mobileFiltersPanel" class="mobile-filters-panel hidden">
-            <div class="mobile-filters-grid">
-              <div class="form-group">
-                <label for="mobileOwnerFilter">Responsável</label>
-                <select id="mobileOwnerFilter">
-                  <option value="">Todos os responsáveis</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="mobileMonthFilter">Mês</label>
-                <select id="mobileMonthFilter">
-                  <option value="">Todos os meses</option>
-                </select>
-              </div>
+        </header>
+
+        <div id="mobileFiltersPanel" class="mobile-filters-panel hidden">
+          <div class="mobile-filters-grid">
+            <div class="form-group">
+              <label for="mobileOwnerFilter">Responsável</label>
+              <select id="mobileOwnerFilter">
+                <option value="">Todos os responsáveis</option>
+              </select>
             </div>
-            <div class="mobile-filters-actions">
-              <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
+            <div class="form-group">
+              <label for="mobileMonthFilter">Mês</label>
+              <select id="mobileMonthFilter">
+                <option value="">Todos os meses</option>
+              </select>
             </div>
           </div>
-        </header>
+          <div class="mobile-filters-actions">
+            <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
+          </div>
+        </div>
 
         <section id="view-funil" class="view active-view">
           <div class="funil-sticky-head" id="funilStickyHead">
@@ -448,7 +449,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260414-27"></script>
-  <script src="script.js?v=20260414-27"></script>
+  <script src="config.js?v=20260414-28"></script>
+  <script src="script.js?v=20260414-28"></script>
 </body>
 </html>

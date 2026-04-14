@@ -1467,9 +1467,14 @@ input[type="color"]::-moz-color-swatch {
   }
   .brand h1{font-size:18px}
   .brand p{font-size:12px}
-  .topbar-actions{gap:8px;row-gap:10px}
-  .btn{padding:10px 12px}
-  .btn-history{padding:8px 10px;font-size:12px}
+  .topbar-actions{gap:7px;row-gap:8px}
+  .topbar-actions input,
+  .topbar-actions .filter-btn,
+  .topbar-actions .btn{
+    font-size:13px;
+  }
+  .btn{padding:9px 11px}
+  .btn-history{padding:7px 9px;font-size:12px}
   .icon-btn{
     min-width:34px;
     height:34px;
@@ -1504,13 +1509,23 @@ input[type="color"]::-moz-color-swatch {
     height:50px;
   }
   .menu-item{padding:10px 11px;font-size:14px}
+  .topbar-actions{
+    gap:6px;
+    row-gap:7px;
+  }
   .topbar-actions input,
   .topbar-actions .filter-dropdown{
-    min-width:156px;
+    min-width:142px;
   }
+  .topbar-actions input,
   .filter-btn{
+    font-size:12px;
     min-height:40px;
-    padding:10px 12px;
+    padding:9px 10px;
+  }
+  .topbar-actions .btn{
+    padding:9px 10px;
+    font-size:12px;
   }
 }
 
