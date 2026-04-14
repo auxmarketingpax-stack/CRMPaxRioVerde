@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
-  <link rel="stylesheet" href="style.css?v=20260414-18" />
+  <link rel="stylesheet" href="style.css?v=20260414-19" />
 </head>
 <body>
   <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
@@ -64,6 +64,7 @@
       <div class="mobile-topbar-main">
       <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Abrir menu">☰</button>
       <div class="mobile-brand-block"><strong id="mobileOrgName">CRM Pax</strong></div>
+      <button type="button" id="mobileFiltersBtn" class="btn btn-secondary mobile-only mobile-filter-icon-btn" aria-label="Abrir filtros">⌕</button>
       </div>
       <nav class="mobile-nav" aria-label="Menu principal no celular">
         <button class="menu-item mobile-nav-item active" data-view="funil" type="button">Funil</button>
@@ -131,7 +132,6 @@
               </select>
             </div>
 
-            <button type="button" id="mobileFiltersBtn" class="btn btn-secondary mobile-only mobile-filter-icon-btn" aria-label="Abrir filtros">≡</button>
             <button type="button" id="importCsvBtn" class="btn btn-secondary mobile-hidden-control">Importar CSV</button>
             <button type="button" id="exportCsvBtn" class="btn btn-secondary mobile-hidden-control">Exportar CSV</button>
             <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden" />
@@ -448,7 +448,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260414-18"></script>
-  <script src="script.js?v=20260414-18"></script>
+  <script src="config.js?v=20260414-19"></script>
+  <script src="script.js?v=20260414-19"></script>
 </body>
 </html>
