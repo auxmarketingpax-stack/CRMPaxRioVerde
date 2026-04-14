@@ -484,6 +484,9 @@ input:focus,select:focus,textarea:focus{
 .mobile-filters-panel .form-group{
   margin-bottom:10px;
 }
+.main > #mobileFiltersPanel{
+  display:none!important;
+}
 .mobile-filters-panel label{
   font-size:13px;
   color:#dff2e5;
@@ -967,6 +970,9 @@ input:focus,select:focus,textarea:focus{
 @media(max-width:1100px){
   .mobile-only{display:inline-flex!important}
   .app{grid-template-columns:1fr}
+  #pipelineScrollTop{
+    display:none!important;
+  }
   .funil-sticky-head{
     display:none;
   }
@@ -1512,20 +1518,25 @@ input[type="color"]::-moz-color-swatch {
   .topbar-actions{
     gap:6px;
     row-gap:7px;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    scrollbar-width:none;
   }
+  .topbar-actions::-webkit-scrollbar{display:none}
   .topbar-actions input,
   .topbar-actions .filter-dropdown{
-    min-width:142px;
+    min-width:128px;
   }
   .topbar-actions input,
   .filter-btn{
     font-size:12px;
-    min-height:40px;
-    padding:9px 10px;
+    min-height:38px;
+    padding:8px 9px;
   }
   .topbar-actions .btn{
-    padding:9px 10px;
-    font-size:12px;
+    padding:8px 9px;
+    font-size:11px;
+    white-space:nowrap;
   }
 }
 

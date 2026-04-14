@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
-  <link rel="stylesheet" href="style.css?v=20260414-28" />
+  <link rel="stylesheet" href="style.css?v=20260414-30" />
 </head>
 <body>
   <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
@@ -73,6 +73,26 @@
         <button class="menu-item mobile-nav-item" data-view="equipe" type="button">Equipe</button>
         <button class="menu-item mobile-nav-item" data-view="configuracoes" type="button">Config.</button>
       </nav>
+    </div>
+
+    <div id="mobileFiltersPanel" class="mobile-filters-panel hidden">
+      <div class="mobile-filters-grid">
+        <div class="form-group">
+          <label for="mobileOwnerFilter">ResponsÃ¡vel</label>
+          <select id="mobileOwnerFilter">
+            <option value="">Todos os responsÃ¡veis</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="mobileMonthFilter">MÃªs</label>
+          <select id="mobileMonthFilter">
+            <option value="">Todos os meses</option>
+          </select>
+        </div>
+      </div>
+      <div class="mobile-filters-actions">
+        <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
+      </div>
     </div>
 
     <div class="app">
@@ -449,7 +469,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=20260414-28"></script>
-  <script src="script.js?v=20260414-28"></script>
+  <script src="config.js?v=20260414-30"></script>
+  <script src="script.js?v=20260414-30"></script>
 </body>
 </html>
