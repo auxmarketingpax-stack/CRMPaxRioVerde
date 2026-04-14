@@ -694,7 +694,7 @@
   }
 
   function isCompactViewport() {
-    return window.matchMedia("(max-width: 700px)").matches;
+    return window.matchMedia("(max-width: 1100px)").matches;
   }
 
   function setMobileFiltersOpen(shouldOpen) {

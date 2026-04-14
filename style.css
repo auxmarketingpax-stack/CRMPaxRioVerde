@@ -931,12 +931,39 @@ input:focus,select:focus,textarea:focus{
 }
 
 @media(max-width:1100px){
+  .mobile-only{display:inline-flex!important}
   .app{grid-template-columns:1fr}
+  .topbar{
+    position:static;
+    padding:0;
+    gap:0;
+    min-height:0;
+    background:transparent;
+    backdrop-filter:none;
+  }
+  .topbar > div:first-child,
+  .topbar-actions{
+    display:none;
+  }
   .funil-sticky-head{
     display:none;
   }
   .mobile-filters-panel{
-    display:none!important;
+    position:fixed;
+    top:calc(var(--mobile-topbar-height) + 8px);
+    right:12px;
+    width:min(260px, calc(100vw - 24px));
+    max-height:calc(100vh - var(--mobile-topbar-height) - 20px);
+    margin-top:0;
+    padding:14px;
+    overflow:auto;
+    z-index:60;
+  }
+  .mobile-filters-grid{
+    grid-template-columns:1fr;
+  }
+  #pipelineScrollTop{
+    top:calc(var(--mobile-topbar-height) + 4px);
   }
   .sidebar{
     display:none;
@@ -971,35 +998,8 @@ input:focus,select:focus,textarea:focus{
   .main{
     padding:16px 12px 24px;
   }
-  .topbar{
-    position:static;
-    padding:0;
-    gap:0;
-    min-height:0;
-    background:transparent;
-    backdrop-filter:none;
-  }
-  .topbar > div:first-child,
-  .topbar-actions{
-    display:none;
-  }
   .mobile-filters-panel{
-    display:block!important;
-    position:fixed;
-    top:calc(var(--mobile-topbar-height) + 8px);
-    right:12px;
     width:min(240px, calc(100vw - 24px));
-    max-height:calc(100vh - var(--mobile-topbar-height) - 20px);
-    margin-top:0;
-    padding:14px;
-    overflow:auto;
-    z-index:60;
-  }
-  .mobile-filters-grid{
-    grid-template-columns:1fr;
-  }
-  #pipelineScrollTop{
-    top:calc(var(--mobile-topbar-height) + 4px);
   }
   .mobile-topbar{
     gap:0;
