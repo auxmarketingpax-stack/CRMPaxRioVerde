@@ -197,7 +197,7 @@
     overlay.scrollTop = 0;
     document.body.classList.add("modal-open");
 
-    const modal = overlay.querySelector(".modal");
+    const modal = overlay.querySelector(".crm-modal");
     if (modal) {
       modal.scrollTop = 0;
       requestAnimationFrame(() => {

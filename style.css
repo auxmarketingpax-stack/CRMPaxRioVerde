@@ -759,7 +759,7 @@ input:focus,select:focus,textarea:focus{
   gap:12px
 }
 
-.modal-overlay{
+.crm-modal-overlay{
   position:fixed;
   inset:0;
   background:rgba(2,8,5,.68);
@@ -770,7 +770,7 @@ input:focus,select:focus,textarea:focus{
   overflow-y:auto;
   z-index:999
 }
-.modal{
+.crm-modal{
   width:100%;
   max-width:820px;
   position:relative;
@@ -783,8 +783,8 @@ input:focus,select:focus,textarea:focus{
   margin:auto 0;
   box-shadow:var(--shadow)
 }
-.small-modal{max-width:460px}
-.history-modal{max-width:900px}
+.crm-small-modal{max-width:460px}
+.crm-history-modal{max-width:900px}
 .modal-header{
   padding:18px 20px;
   border-bottom:1px solid var(--border);
