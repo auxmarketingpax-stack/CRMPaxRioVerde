@@ -13,7 +13,10 @@
     updatePasswordBtn: $("updatePasswordBtn"),
     logoutBtn: $("logoutBtn"),
     mobileMenuBtn: $("mobileMenuBtn"),
+    mobileTopbar: document.querySelector(".mobile-topbar"),
     sidebar: $("sidebar"),
+    main: document.querySelector(".main"),
+    topbar: document.querySelector(".topbar"),
 
     orgNameLabel: $("orgNameLabel"),
     mobileOrgName: $("mobileOrgName"),
@@ -57,6 +60,7 @@
     organicLeads: $("organicLeads"),
     topStage: $("topStage"),
     paidRate: $("paidRate"),
+    metricsSection: $("metricsSection"),
 
     reportClosedValue: $("reportClosedValue"),
     reportPaidCount: $("reportPaidCount"),
@@ -650,6 +654,9 @@
   }
 
   function stageTypeLabel(type, customStageType = "") {
+    const customLabel = String(customStageType || "").trim();
+    if (type === "personalizado" && customLabel) return customLabel;
+
     const map = {
       andamento: "Andamento",
       fechado: "Fechado",
@@ -657,7 +664,21 @@
       espera: "Espera",
       personalizado: "Personalizado"
     };
-    return map[type] || customStageType || "Andamento";
+    return map[type] || customLabel || "Andamento";
+  }
+
+  function updateStickyLayout() {
+    const root = document.documentElement;
+    if (!root) return;
+
+    const mobileTopbarVisible = !!(els.mobileTopbar && window.getComputedStyle(els.mobileTopbar).display !== "none");
+    const mobileTopbarHeight = mobileTopbarVisible ? els.mobileTopbar.offsetHeight : 0;
+    const topbarHeight = els.topbar ? els.topbar.offsetHeight : 0;
+
+    root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
+    root.style.setProperty("--topbar-height", `${topbarHeight}px`);
+    root.style.setProperty("--topbar-sticky-offset", `${mobileTopbarHeight}px`);
+    root.style.setProperty("--metrics-sticky-offset", `${mobileTopbarHeight + topbarHeight + 12}px`);
   }
 
   function isPresetStageType(value) {
@@ -2124,6 +2145,7 @@
       renderCharts();
     }
     bindGeneralActionEvents();
+    requestAnimationFrame(updateStickyLayout);
   }
 
   function openLeadModal(lead = null) {
@@ -2502,6 +2524,7 @@
     els.pageTitle.textContent = titles[name][0];
     els.pageSubtitle.textContent = titles[name][1];
     els.sidebar.classList.remove("open");
+    requestAnimationFrame(updateStickyLayout);
 
     if (name === "relatorios") {
       setTimeout(async () => {
@@ -2741,6 +2764,7 @@
     setupPlanListEvents();
     setupObservationListEvents();
     attachPipelineScrollEvents();
+    window.addEventListener("resize", () => requestAnimationFrame(updateStickyLayout));
 
     document.addEventListener("click", (event) => {
       const leadBtn = event.target.closest("[data-action]");
@@ -2793,6 +2817,7 @@
       runPeriodicStorageCleanup();
       createClient();
       bindEvents();
+      requestAnimationFrame(updateStickyLayout);
       await bootstrap();
     } catch (error) {
       console.error(error);
