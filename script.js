@@ -61,6 +61,7 @@
     topStage: $("topStage"),
     paidRate: $("paidRate"),
     metricsSection: $("metricsSection"),
+    funilStickyHead: $("funilStickyHead"),
 
     reportClosedValue: $("reportClosedValue"),
     reportPaidCount: $("reportPaidCount"),
@@ -676,6 +677,7 @@
     const topbarHeight = els.topbar ? els.topbar.offsetHeight : 0;
     const metricsHeight = els.metricsSection ? els.metricsSection.offsetHeight : 0;
     const pipelineScrollbarHeight = els.pipelineScrollTop ? els.pipelineScrollTop.offsetHeight : 0;
+    const funilStickyHeight = els.funilStickyHead ? els.funilStickyHead.offsetHeight : (metricsHeight + pipelineScrollbarHeight);
 
     root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
     root.style.setProperty("--topbar-height", `${topbarHeight}px`);
@@ -683,6 +685,7 @@
     root.style.setProperty("--metrics-sticky-offset", `${mobileTopbarHeight + topbarHeight + 12}px`);
     root.style.setProperty("--pipeline-scrollbar-height", `${pipelineScrollbarHeight}px`);
     root.style.setProperty("--pipeline-scrollbar-sticky-offset", `${mobileTopbarHeight + topbarHeight + metricsHeight + 20}px`);
+    root.style.setProperty("--funil-sticky-height", `${funilStickyHeight}px`);
   }
 
   function bindOverlayDismiss(overlay, closeFn) {
@@ -732,7 +735,7 @@
 
     const options = [...presetOptions, ...customOptions];
     if (includePersonalized) {
-      options.push({ value: "personalizado", label: "+ Criar um novo" });
+      options.push({ value: "personalizado", label: "Criar um novo" });
     }
 
     return options;
@@ -830,7 +833,7 @@
     els.savedStageTypesGroup.classList.remove("hidden");
 
     if (!types.length) {
-      els.savedStageTypes.innerHTML = '<div class="saved-stage-types-empty">Nenhum tipo disponivel na lista. Use "+ Criar um novo" para adicionar outro.</div>';
+      els.savedStageTypes.innerHTML = '<div class="saved-stage-types-empty">Nenhum tipo disponivel na lista. Use "Criar um novo" para adicionar outro.</div>';
       return;
     }
 
@@ -853,7 +856,7 @@
     const selectedOption = getSelectableStageTypeOptions(false).find((item) => item.value === selected);
     const selectedLabel = selectedOption?.label || stageTypeLabel(selected);
 
-    els.customStageTypeGroup.classList.remove("hidden");
+    els.customStageTypeGroup.classList.toggle("hidden", !(isNewCustom || isExistingCustom));
     if (els.customStageType) {
       els.customStageType.disabled = false;
       if (isNewCustom) {
@@ -867,7 +870,7 @@
       } else if (isExistingCustom) {
         els.customStageType.value = selected.replace(/^custom:/, "");
       } else {
-        els.customStageType.value = selectedLabel;
+        els.customStageType.value = "";
       }
     }
     const canRemoveSelected = selected && selected !== "personalizado";
