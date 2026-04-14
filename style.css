@@ -885,11 +885,18 @@ input:focus,select:focus,textarea:focus{
   .sidebar{
     display:none;
     position:fixed;
-    left:0;
-    top:var(--mobile-topbar-height);
-    bottom:0;
-    width:280px;
-    z-index:30
+    left:12px;
+    top:calc(var(--mobile-topbar-height) + 8px);
+    width:min(240px, calc(100vw - 24px));
+    max-height:calc(100vh - var(--mobile-topbar-height) - 20px);
+    height:auto;
+    padding:14px;
+    gap:14px;
+    border:1px solid var(--border);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    overflow:auto;
+    z-index:60
   }
   .sidebar.open{display:flex}
   .mobile-topbar{display:flex}
@@ -926,6 +933,30 @@ input:focus,select:focus,textarea:focus{
   .topbar-actions .mobile-only{
     width:100%;
     justify-content:center;
+  }
+  .mobile-nav{
+    display:none;
+  }
+  .mobile-topbar{
+    gap:0;
+  }
+  .sidebar .brand,
+  .sidebar-footer p{
+    display:none;
+  }
+  .sidebar .menu{
+    gap:6px;
+  }
+  .sidebar .menu-item{
+    padding:11px 12px;
+    font-size:15px;
+  }
+  .sidebar-footer{
+    margin-top:4px;
+  }
+  .sidebar-footer .btn-ghost{
+    width:100%;
+    margin-top:0;
   }
   .mobile-filters-grid{
     grid-template-columns:1fr;
