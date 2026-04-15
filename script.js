@@ -10,7 +10,6 @@
     loginForm: $("loginForm"),
     registerForm: $("registerForm"),
     forgotPasswordBtn: $("forgotPasswordBtn"),
-    resendConfirmBtn: $("resendConfirmBtn"),
     updatePasswordBtn: $("updatePasswordBtn"),
     logoutBtn: $("logoutBtn"),
     mobileMenuBtn: $("mobileMenuBtn"),
@@ -194,12 +193,24 @@
       return "Seu e-mail ainda nao foi confirmado. Verifique a caixa de entrada antes de entrar.";
     }
 
+    if (code === "email_provider_disabled" || message.includes("email provider is disabled")) {
+      return "O login e cadastro por e-mail estao desabilitados no Supabase. Ative o provedor Email nas configuracoes de Authentication.";
+    }
+
+    if (code === "provider_disabled" || message.includes("provider is disabled")) {
+      return "Este metodo de autenticacao esta desabilitado no Supabase. Revise Authentication > Providers.";
+    }
+
     if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
       return "E-mail ou senha invalidos.";
     }
 
     if (code === "email_exists" || message.includes("user already registered")) {
       return "Este e-mail ja esta cadastrado. Tente entrar ou recuperar a senha.";
+    }
+
+    if (code === "email_address_not_authorized" || message.includes("email address not authorized")) {
+      return "O Supabase nao vai enviar e-mails para esse endereco usando o SMTP padrao. Configure um SMTP proprio ou teste com um e-mail da equipe do projeto.";
     }
 
     return error?.message || fallback;
@@ -2698,26 +2709,6 @@
     setMessage(els.authMessage, "Enviamos o link de recuperação. Verifique seu e-mail.");
   }
 
-  async function resendSignupConfirmation() {
-    const email = $("loginEmail").value.trim() || $("registerEmail").value.trim();
-    if (!email) return setMessage(els.authMessage, "Digite seu e-mail para reenviar a confirmacao.", true);
-
-    const payload = {
-      type: "signup",
-      email
-    };
-
-    const emailRedirectTo = getAuthRedirectUrl();
-    if (emailRedirectTo) {
-      payload.options = { emailRedirectTo };
-    }
-
-    const { error } = await state.supabase.auth.resend(payload);
-    if (error) return setMessage(els.authMessage, getAuthErrorMessage(error, "Nao foi possivel reenviar a confirmacao."), true);
-
-    setMessage(els.authMessage, "Se o Supabase estiver configurado para enviar confirmacao, o link foi reenviado para seu e-mail.");
-  }
-
   async function updateRecoveredPassword() {
     const newPassword = $("newPassword").value.trim();
     if (!newPassword) return setMessage(els.authMessage, "Digite a nova senha.", true);
@@ -2908,7 +2899,6 @@
     });
 
     els.forgotPasswordBtn.addEventListener("click", sendResetPasswordEmail);
-    els.resendConfirmBtn?.addEventListener("click", resendSignupConfirmation);
     els.updatePasswordBtn.addEventListener("click", updateRecoveredPassword);
 
     els.logoutBtn.addEventListener("click", async () => {
