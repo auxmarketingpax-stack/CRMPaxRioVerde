@@ -280,6 +280,21 @@
     els.bootScreen.classList.add("hidden");
   }
 
+  function resetAppState() {
+    state.currentUser = null;
+    state.profile = null;
+    state.stages = [];
+    state.customStageTypes = [];
+    state.hiddenPresetStageTypes = [];
+    state.leads = [];
+    state.profiles = [];
+    state.history = [];
+    state.activeView = "funil";
+    state.historyLoaded = false;
+    state.profilesLoaded = false;
+    els.resetPasswordBox?.classList.add("hidden");
+  }
+
   function closeAllModals() {
     [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay].forEach((overlay) => {
       overlay?.classList.add("hidden");
@@ -1536,17 +1551,7 @@
     }
 
     if (event === "SIGNED_OUT") {
-      state.currentUser = null;
-      state.profile = null;
-      state.stages = [];
-      state.customStageTypes = [];
-      state.hiddenPresetStageTypes = [];
-      state.leads = [];
-      state.profiles = [];
-      state.history = [];
-      state.activeView = "funil";
-      state.historyLoaded = false;
-      state.profilesLoaded = false;
+      resetAppState();
       showScreen("authScreen");
       return;
     }
@@ -2999,13 +3004,7 @@
 
     els.logoutBtn.addEventListener("click", async () => {
       await state.supabase.auth.signOut();
-      state.currentUser = null;
-      state.profile = null;
-      state.stages = [];
-      state.customStageTypes = [];
-      state.leads = [];
-      state.profiles = [];
-      state.history = [];
+      resetAppState();
       showScreen("authScreen");
     });
 
