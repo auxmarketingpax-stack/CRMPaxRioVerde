@@ -6,6 +6,8 @@
     authScreen: $("authScreen"),
     appScreen: $("appScreen"),
     authMessage: $("authMessage"),
+    registerTabBtn: $("registerTabBtn"),
+    registrationNotice: $("registrationNotice"),
     resetPasswordBox: $("resetPasswordBox"),
     loginForm: $("loginForm"),
     registerForm: $("registerForm"),
@@ -142,6 +144,10 @@
     activeView: "funil",
     historyLoaded: false,
     profilesLoaded: false,
+    security: {
+      allowSelfRegistration: false,
+      allowedSignupEmailDomains: []
+    },
     chartLoader: null,
     selectedLeadIds: new Set(),
     modalPlans: [],
@@ -164,6 +170,10 @@
     { value: "espera", label: "Espera" }
   ];
 
+  const DEFAULT_STAGE_COLOR = "#1F9D55";
+  const CHART_JS_URL = "https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js";
+  const ALLOWED_EXTERNAL_SCRIPT_URLS = new Set([CHART_JS_URL]);
+
   const STORAGE_CACHE_KEYS = [
     "crmPax.customStageTypes",
     "crmPax.hiddenPresetStageTypes"
@@ -178,6 +188,45 @@
       throw new Error("Configuração do Supabase não encontrada em config.js");
     }
     state.supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  }
+
+  function getSecurityConfig() {
+    const cfg = window.APP_CONFIG || {};
+    const allowedSignupEmailDomains = [...new Set(
+      (Array.isArray(cfg.allowedSignupEmailDomains) ? cfg.allowedSignupEmailDomains : [])
+        .map((item) => String(item || "").trim().toLowerCase().replace(/^@+/, ""))
+        .filter((item) => item && item.includes(".") && !item.includes(" "))
+    )];
+
+    return {
+      allowSelfRegistration: cfg.allowSelfRegistration === true,
+      allowedSignupEmailDomains
+    };
+  }
+
+  function getSignupRestrictionMessage() {
+    if (!state.security.allowSelfRegistration) {
+      return "Cadastro publico desabilitado. Somente usuarios liberados pela equipe podem entrar.";
+    }
+
+    if (!state.security.allowedSignupEmailDomains.length) return "";
+    return `Cadastro liberado apenas para e-mails de: ${state.security.allowedSignupEmailDomains.join(", ")}.`;
+  }
+
+  function applySecurityConfigToUi() {
+    const selfRegistrationEnabled = state.security.allowSelfRegistration;
+    els.registerTabBtn?.classList.toggle("hidden", !selfRegistrationEnabled);
+    els.registerForm?.classList.toggle("hidden", !selfRegistrationEnabled);
+    els.registerForm?.classList.remove("active");
+    els.loginForm?.classList.add("active");
+    document.querySelector('[data-tab="login"]')?.classList.add("active");
+    els.registerTabBtn?.classList.remove("active");
+
+    const notice = getSignupRestrictionMessage();
+    if (els.registrationNotice) {
+      els.registrationNotice.textContent = notice;
+      els.registrationNotice.classList.toggle("hidden", !notice);
+    }
   }
 
   function setMessage(el, text, isError = false) {
@@ -404,11 +453,18 @@
 
   function loadExternalScript(src) {
     return new Promise((resolve, reject) => {
+      const normalizedSrc = String(src || "").trim();
+      if (!ALLOWED_EXTERNAL_SCRIPT_URLS.has(normalizedSrc)) {
+        reject(new Error(`Origem de script nao autorizada: ${normalizedSrc}`));
+        return;
+      }
       const script = document.createElement("script");
-      script.src = src;
+      script.src = normalizedSrc;
       script.async = true;
+      script.crossOrigin = "anonymous";
+      script.referrerPolicy = "no-referrer";
       script.onload = resolve;
-      script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+      script.onerror = () => reject(new Error(`Falha ao carregar ${normalizedSrc}`));
       document.head.appendChild(script);
     });
   }
@@ -416,7 +472,7 @@
   async function ensureChartLibrary() {
     if (typeof window.Chart !== "undefined") return;
     if (!state.chartLoader) {
-      state.chartLoader = loadExternalScript("https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js")
+      state.chartLoader = loadExternalScript(CHART_JS_URL)
         .catch((error) => {
           state.chartLoader = null;
           throw error;
@@ -597,6 +653,33 @@
       start_date: normalizeDateInput(lead?.start_date || "") || String(lead?.start_date || "").trim(),
       _meta: meta
     };
+  }
+
+  function sanitizeHexColor(value, fallback = DEFAULT_STAGE_COLOR) {
+    const raw = String(value || "").trim().toUpperCase();
+    if (/^#[0-9A-F]{6}$/.test(raw)) return raw;
+
+    const short = raw.match(/^#([0-9A-F]{3})$/);
+    if (short) {
+      return `#${short[1].split("").map((char) => char + char).join("")}`;
+    }
+
+    return fallback;
+  }
+
+  function normalizeStage(stage) {
+    return {
+      ...stage,
+      color: sanitizeHexColor(stage?.color)
+    };
+  }
+
+  function isSignupEmailAllowed(email) {
+    if (!state.security.allowedSignupEmailDomains.length) return true;
+
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const domain = normalizedEmail.split("@")[1] || "";
+    return state.security.allowedSignupEmailDomains.includes(domain);
   }
 
   function getLeadPlans(lead) {
@@ -1361,7 +1444,10 @@
   }
 
   function updateStageColorPreview(value) {
-    const color = String(value || "#1f9d55").toUpperCase();
+    const color = sanitizeHexColor(value);
+    if (els.stageColor && els.stageColor.value !== color) {
+      els.stageColor.value = color;
+    }
     if (els.stageColorPreview) {
       els.stageColorPreview.textContent = color;
       els.stageColorPreview.style.borderColor = `${color}55`;
@@ -1539,7 +1625,7 @@
       return;
     }
 
-    state.stages = stagesRes.data || [];
+    state.stages = (stagesRes.data || []).map(normalizeStage);
     state.leads = (leadsRes.data || []).map(normalizeLead);
     state.customStageTypes = persistCustomStageTypes([
       ...getStoredCustomStageTypes(),
@@ -2049,7 +2135,7 @@
   }
 
   function stageColors() {
-    return state.stages.map((s) => s.color || "#1f9d55");
+    return state.stages.map((stage) => sanitizeHexColor(stage.color));
   }
 
   function renderCharts() {
@@ -2378,7 +2464,7 @@
     els.stageModalTitle.textContent = stage ? "Editar pipeline" : "Adicionar pipeline";
     els.saveStageBtn.textContent = stage ? "Salvar alterações" : "Adicionar";
     els.stageName.value = stage?.name || "";
-    els.stageColor.value = stage?.color || "#1f9d55";
+    els.stageColor.value = sanitizeHexColor(stage?.color);
     refreshStageTypeOptions(stage?.custom_stage_type ? `custom:${stage.custom_stage_type}` : (stage?.stage_type || "andamento"), stage?.custom_stage_type || "");
     updateStageColorPreview(els.stageColor.value);
     openModalOverlay(els.stageModalOverlay, "#stageName");
@@ -2527,7 +2613,7 @@
       : (isEditingExistingCustom ? (customStageTypeInput || existingCustomType) : "");
     const payload = {
       name: els.stageName.value.trim(),
-      color: els.stageColor.value,
+      color: sanitizeHexColor(els.stageColor.value),
       stage_type: (isCreatingNewCustom || isEditingExistingCustom)
         ? "personalizado"
         : (["andamento", "fechado", "cancelado", "espera"].includes(selectedType) ? selectedType : "andamento"),
@@ -2836,9 +2922,12 @@
 
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (btn.classList.contains("hidden")) return;
+        const targetPanel = $(`${btn.dataset.tab}Form`);
+        if (!targetPanel || targetPanel.classList.contains("hidden")) return;
         document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
         document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
-        $(`${btn.dataset.tab}Form`).classList.add("active");
+        targetPanel.classList.add("active");
       });
     });
 
@@ -2866,7 +2955,14 @@
       e.preventDefault();
       setMessage(els.authMessage, "");
 
+      if (!state.security.allowSelfRegistration) {
+        return setMessage(els.authMessage, getSignupRestrictionMessage(), true);
+      }
+
       const email = $("registerEmail").value.trim();
+      if (!isSignupEmailAllowed(email)) {
+        return setMessage(els.authMessage, getSignupRestrictionMessage(), true);
+      }
       const password = $("registerPassword").value.trim();
       const full_name = $("registerName").value.trim();
       const emailRedirectTo = getAuthRedirectUrl();
@@ -3066,6 +3162,8 @@
   async function init() {
     try {
       runPeriodicStorageCleanup();
+      state.security = getSecurityConfig();
+      applySecurityConfigToUi();
       createClient();
       bindEvents();
       requestAnimationFrame(updateStickyLayout);

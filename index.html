@@ -6,6 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
   <link rel="stylesheet" href="style.css?v=20260414-33" />
@@ -21,7 +22,7 @@
 
         <div class="tabs">
           <button class="tab-btn active" data-tab="login" type="button">Entrar</button>
-          <button class="tab-btn" data-tab="register" type="button">Criar conta</button>
+          <button class="tab-btn" id="registerTabBtn" data-tab="register" type="button">Criar conta</button>
         </div>
 
         <form id="loginForm" class="tab-panel active">
@@ -47,6 +48,8 @@
 
           <button class="btn btn-primary" type="submit">Criar conta</button>
         </form>
+
+        <div id="registrationNotice" class="security-note hidden"></div>
 
         <div id="resetPasswordBox" class="hidden stack reset-box">
           <label for="newPassword">Nova senha</label>
