@@ -1149,6 +1149,14 @@ input:focus,select:focus,textarea:focus{
   height: 250px !important;
 }
 
+.chart-card-annual {
+  min-height: 460px;
+}
+
+.chart-card-annual canvas {
+  height: 380px !important;
+}
+
 .stage-meta-row {
   display: flex;
   gap: 10px;

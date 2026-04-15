@@ -156,6 +156,7 @@
       pipeline: null,
       traffic: null,
       owner: null,
+      yearlyDaily: null,
       monthly: null,
       social: null,
       planCount: null,
@@ -508,6 +509,11 @@
     return `${String(value).slice(5, 7)}/${String(value).slice(0, 4)}`;
   }
 
+  function formatDayMonthLabel(value) {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return value || "-";
+    return `${String(value).slice(8, 10)}/${String(value).slice(5, 7)}`;
+  }
+
   function normalizeDateInput(value) {
     const raw = String(value || "").trim();
     if (!raw) return "";
@@ -743,11 +749,38 @@
   }
 
   function getLeadMonthKey(lead) {
-    const fromStart = normalizeDateInput(lead?.start_date || "");
-    if (fromStart) return fromStart.slice(0, 7);
+    const leadDate = getLeadDateKey(lead);
+    return leadDate ? leadDate.slice(0, 7) : "";
+  }
 
-    const created = normalizeDateInput(String(lead?.created_at || "").slice(0, 10));
-    return created ? created.slice(0, 7) : "";
+  function getLeadDateKey(lead) {
+    const fromStart = normalizeDateInput(lead?.start_date || "");
+    if (fromStart) return fromStart;
+
+    return normalizeDateInput(String(lead?.created_at || "").slice(0, 10));
+  }
+
+  function getReportYear(leads) {
+    const selectedMonth = String(els.monthFilter?.value || "").trim();
+    if (/^\d{4}-\d{2}$/.test(selectedMonth)) return selectedMonth.slice(0, 4);
+
+    const years = [...new Set(leads.map((lead) => getLeadDateKey(lead).slice(0, 4)).filter(Boolean))].sort();
+    return years[years.length - 1] || String(new Date().getFullYear());
+  }
+
+  function buildYearDateKeys(year) {
+    const yearNumber = Number(year);
+    if (!Number.isInteger(yearNumber)) return [];
+
+    const dates = [];
+    const cursor = new Date(Date.UTC(yearNumber, 0, 1));
+
+    while (cursor.getUTCFullYear() === yearNumber) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return dates;
   }
 
   function hasLeadValue(lead) {
@@ -2146,7 +2179,7 @@
   function renderCharts() {
     if (typeof Chart === "undefined") return;
 
-    ["pipeline", "traffic", "owner", "monthly", "social", "planCount", "planRevenue"].forEach(destroyChart);
+    ["pipeline", "traffic", "owner", "yearlyDaily", "monthly", "social", "planCount", "planRevenue"].forEach(destroyChart);
 
     const reportView = $("view-relatorios");
     if (!reportView || !reportView.classList.contains("active-view")) return;
@@ -2175,6 +2208,15 @@
       return acc;
     }, {});
 
+    const reportYear = getReportYear(filteredAllMonths);
+    const yearDateKeys = buildYearDateKeys(reportYear);
+    const yearDayMap = filteredAllMonths.reduce((acc, lead) => {
+      const key = getLeadDateKey(lead);
+      if (!key || !key.startsWith(`${reportYear}-`)) return acc;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
     const socialMap = filtered.reduce((acc, lead) => {
       const key = lead.social_source || "Não informado";
       acc[key] = (acc[key] || 0) + 1;
@@ -2182,6 +2224,8 @@
     }, {});
 
     const planLabels = metrics.planSummary.map((item) => `${item.plan} - ${formatPlanValue(item.unitValue)}`);
+    const yearChartTitle = $("yearlyChartTitle");
+    if (yearChartTitle) yearChartTitle.textContent = `Contatos diários de ${reportYear} (dia a dia)`;
 
     const create = (key, id, config) => {
       const canvas = $(id);
@@ -2189,9 +2233,41 @@
       state.charts[key] = new Chart(canvas, config);
     };
 
+    const yearLabels = yearDateKeys.map((key) => formatDayMonthLabel(key));
+    const monthStartIndexes = new Set(yearDateKeys.reduce((acc, key, index) => {
+      if (key.endsWith("-01")) acc.push(index);
+      return acc;
+    }, []));
+
     create("pipeline", "pipelineChart", makeChartConfig("bar", metrics.byStage.map((item) => item.name), [{ label: "Leads", data: metrics.byStage.map((item) => item.count), backgroundColor: stageColors(), borderColor: stageColors() }]));
     create("traffic", "trafficChart", makeChartConfig("doughnut", Object.keys(trafficMap), [{ label: "Origem", data: Object.values(trafficMap) }], { scales: {} }));
     create("owner", "ownerChart", makeChartConfig("bar", Object.keys(ownerMap), [{ label: "Receita fechada", data: Object.values(ownerMap) }], { indexAxis: "y" }));
+    create("yearlyDaily", "yearlyDailyChart", makeChartConfig("line", yearLabels, [{
+      label: "Contatos diários",
+      data: yearDateKeys.map((key) => yearDayMap[key] || 0),
+      tension: 0.2,
+      fill: true,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      borderWidth: 2
+    }], {
+      scales: {
+        x: {
+          ticks: {
+            color: "#edf7f0",
+            maxRotation: 0,
+            autoSkip: false,
+            callback: (value, index) => (monthStartIndexes.has(index) ? yearLabels[index] : "")
+          },
+          grid: { color: "rgba(255,255,255,0.08)" }
+        },
+        y: {
+          ticks: { color: "#edf7f0", precision: 0 },
+          grid: { color: "rgba(255,255,255,0.08)" },
+          beginAtZero: true
+        }
+      }
+    }));
 
     const monthLabels = Object.keys(monthMap).sort();
     create("monthly", "monthlyChart", makeChartConfig("line", monthLabels, [{ label: "Leads por mês", data: monthLabels.map((key) => monthMap[key]), tension: 0.3, fill: false }]));
