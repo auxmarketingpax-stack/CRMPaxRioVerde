@@ -10,6 +10,7 @@
     loginForm: $("loginForm"),
     registerForm: $("registerForm"),
     forgotPasswordBtn: $("forgotPasswordBtn"),
+    resendConfirmBtn: $("resendConfirmBtn"),
     updatePasswordBtn: $("updatePasswordBtn"),
     logoutBtn: $("logoutBtn"),
     mobileMenuBtn: $("mobileMenuBtn"),
@@ -202,6 +203,14 @@
     }
 
     return error?.message || fallback;
+  }
+
+  function getAuthRedirectUrl(hash = "") {
+    const protocol = String(window.location.protocol || "").toLowerCase();
+    if (protocol !== "http:" && protocol !== "https:") return null;
+
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    return hash ? `${baseUrl}${hash}` : baseUrl;
   }
 
   function showScreen(id) {
@@ -2673,12 +2682,40 @@
     const email = $("loginEmail").value.trim();
     if (!email) return setMessage(els.authMessage, "Digite seu e-mail para recuperar a senha.", true);
 
-    const redirectTo = `${window.location.origin}${window.location.pathname}#type=recovery`;
+    const redirectTo = getAuthRedirectUrl("#type=recovery");
+
+    if (!redirectTo) {
+      return setMessage(
+        els.authMessage,
+        "Abra o CRM por uma URL http/https para usar e-mails de autenticacao. Arquivo local nao funciona com redirect de autenticacao.",
+        true
+      );
+    }
 
     const { error } = await state.supabase.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) return setMessage(els.authMessage, error.message, true);
 
     setMessage(els.authMessage, "Enviamos o link de recuperação. Verifique seu e-mail.");
+  }
+
+  async function resendSignupConfirmation() {
+    const email = $("loginEmail").value.trim() || $("registerEmail").value.trim();
+    if (!email) return setMessage(els.authMessage, "Digite seu e-mail para reenviar a confirmacao.", true);
+
+    const payload = {
+      type: "signup",
+      email
+    };
+
+    const emailRedirectTo = getAuthRedirectUrl();
+    if (emailRedirectTo) {
+      payload.options = { emailRedirectTo };
+    }
+
+    const { error } = await state.supabase.auth.resend(payload);
+    if (error) return setMessage(els.authMessage, getAuthErrorMessage(error, "Nao foi possivel reenviar a confirmacao."), true);
+
+    setMessage(els.authMessage, "Se o Supabase estiver configurado para enviar confirmacao, o link foi reenviado para seu e-mail.");
   }
 
   async function updateRecoveredPassword() {
@@ -2841,12 +2878,14 @@
       const email = $("registerEmail").value.trim();
       const password = $("registerPassword").value.trim();
       const full_name = $("registerName").value.trim();
+      const emailRedirectTo = getAuthRedirectUrl();
 
       const { data, error } = await state.supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name }
+          data: { full_name },
+          ...(emailRedirectTo ? { emailRedirectTo } : {})
         }
       });
 
@@ -2869,6 +2908,7 @@
     });
 
     els.forgotPasswordBtn.addEventListener("click", sendResetPasswordEmail);
+    els.resendConfirmBtn?.addEventListener("click", resendSignupConfirmation);
     els.updatePasswordBtn.addEventListener("click", updateRecoveredPassword);
 
     els.logoutBtn.addEventListener("click", async () => {
