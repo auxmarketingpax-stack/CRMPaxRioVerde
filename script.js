@@ -185,6 +185,25 @@
     el.style.color = isError ? "#fecaca" : "#cdecd6";
   }
 
+  function getAuthErrorMessage(error, fallback = "Nao foi possivel concluir a autenticacao.") {
+    const code = String(error?.code || "").toLowerCase();
+    const message = String(error?.message || "").toLowerCase();
+
+    if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+      return "Seu e-mail ainda nao foi confirmado. Verifique a caixa de entrada antes de entrar.";
+    }
+
+    if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
+      return "E-mail ou senha invalidos.";
+    }
+
+    if (code === "email_exists" || message.includes("user already registered")) {
+      return "Este e-mail ja esta cadastrado. Tente entrar ou recuperar a senha.";
+    }
+
+    return error?.message || fallback;
+  }
+
   function showScreen(id) {
     closeAllModals();
     [els.authScreen, els.appScreen].forEach((screen) => screen.classList.add("hidden"));
@@ -2804,11 +2823,11 @@
         password: $("loginPassword").value.trim()
       });
 
-      if (error) return setMessage(els.authMessage, "E-mail ou senha inválidos.", true);
+      if (error) return setMessage(els.authMessage, getAuthErrorMessage(error, "Nao foi possivel fazer login."), true);
 
       state.currentUser = data?.user || null;
       if (!state.currentUser) {
-        return setMessage(els.authMessage, "Não foi possível iniciar a sessão. Tente novamente.", true);
+        return setMessage(els.authMessage, "Nao foi possivel iniciar a sessao. Tente novamente.", true);
       }
 
       await ensureProfile();
@@ -2831,16 +2850,21 @@
         }
       });
 
-      if (error) return setMessage(els.authMessage, error.message, true);
+      if (error) return setMessage(els.authMessage, getAuthErrorMessage(error), true);
 
-      if (data.user) {
-        state.currentUser = data.user;
+      if (data.session?.user) {
+        state.currentUser = data.session.user;
         await ensureProfile();
+        await enterApp();
+        $("registerForm").reset();
+        return;
       }
 
-      setMessage(els.authMessage, "Conta criada com sucesso. Agora faça login.");
+      state.currentUser = null;
+      setMessage(els.authMessage, "Se este e-mail for novo, confirme o cadastro na caixa de entrada antes de entrar. Se ele ja existir, tente recuperar a senha.");
       document.querySelector('[data-tab="login"]').click();
       $("loginEmail").value = email;
+      $("loginPassword").value = "";
       $("registerForm").reset();
     });
 
