@@ -23,6 +23,7 @@
     orgNameLabel: $("orgNameLabel"),
     mobileOrgName: $("mobileOrgName"),
     userWelcome: $("userWelcome"),
+    userAccessLevel: $("userAccessLevel"),
     pageTitle: $("pageTitle"),
     pageSubtitle: $("pageSubtitle"),
 
@@ -31,6 +32,7 @@
     mobileFiltersPanel: $("mobileFiltersPanel"),
     mobileOwnerFilter: $("mobileOwnerFilter"),
     mobileMonthFilter: $("mobileMonthFilter"),
+    mobileLeadSourceFilter: $("mobileLeadSourceFilter"),
     mobileClearFiltersBtn: $("mobileClearFiltersBtn"),
     ownerFilterDropdown: $("ownerFilterDropdown"),
     ownerFilterBtn: $("ownerFilterBtn"),
@@ -42,6 +44,11 @@
     monthFilterMenu: $("monthFilterMenu"),
     monthFilterLabel: $("monthFilterLabel"),
     monthFilter: $("monthFilter"),
+    leadSourceFilterDropdown: $("leadSourceFilterDropdown"),
+    leadSourceFilterBtn: $("leadSourceFilterBtn"),
+    leadSourceFilterMenu: $("leadSourceFilterMenu"),
+    leadSourceFilterLabel: $("leadSourceFilterLabel"),
+    leadSourceFilter: $("leadSourceFilter"),
     selectAllLeads: $("selectAllLeads"),
     deleteSelectedBtn: $("deleteSelectedBtn"),
 
@@ -117,6 +124,8 @@
     stageColor: $("stageColor"),
     stageColorPreview: $("stageColorPreview"),
     stageType: $("stageType"),
+    ownerGroup: $("ownerGroup"),
+    planGroup: $("planGroup"),
     customStageTypeGroup: $("customStageTypeGroup"),
     customStageType: $("customStageType"),
     removeCustomTypeBtn: $("removeCustomTypeBtn"),
@@ -124,11 +133,25 @@
     savedStageTypes: $("savedStageTypes"),
     savedStageTypeActions: $("savedStageTypeActions"),
     removeSelectedStageTypeBtn: $("removeSelectedStageTypeBtn"),
+    addLeadSourceBtn: $("addLeadSourceBtn"),
+    leadSourceName: $("leadSourceName"),
+    leadSourcesConfigList: $("leadSourcesConfigList"),
+    teamAccessLegend: $("teamAccessLegend"),
+    accessRequestsList: $("accessRequestsList"),
+    adminRequestsList: $("adminRequestsList"),
 
     historyModalOverlay: $("historyModalOverlay"),
     closeHistoryModalBtn: $("closeHistoryModalBtn"),
     refreshHistoryBtn: $("refreshHistoryBtn"),
-    historyText: $("historyText")
+    historyText: $("historyText"),
+
+    permissionModalOverlay: $("permissionModalOverlay"),
+    closePermissionModalBtn: $("closePermissionModalBtn"),
+    cancelPermissionRequestBtn: $("cancelPermissionRequestBtn"),
+    submitPermissionRequestBtn: $("submitPermissionRequestBtn"),
+    permissionRequestReason: $("permissionRequestReason"),
+    permissionModalTitle: $("permissionModalTitle"),
+    permissionModalText: $("permissionModalText")
   };
 
   const state = {
@@ -140,10 +163,14 @@
     hiddenPresetStageTypes: [],
     leads: [],
     profiles: [],
+    accessRequests: [],
+    adminRequests: [],
+    leadSources: [],
     history: [],
     activeView: "funil",
     historyLoaded: false,
     profilesLoaded: false,
+    permissionRequestContext: null,
     security: {
       allowSelfRegistration: false,
       allowedSignupEmailDomains: []
@@ -174,6 +201,16 @@
   const DEFAULT_STAGE_COLOR = "#1F9D55";
   const CHART_JS_URL = "https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js";
   const ALLOWED_EXTERNAL_SCRIPT_URLS = new Set([CHART_JS_URL]);
+  const USER_ROLE = {
+    ADMIN: "admin",
+    USER: "user"
+  };
+  const ACCESS_STATUS = {
+    PENDING: "pending",
+    APPROVED: "approved",
+    REJECTED: "rejected"
+  };
+  const DEFAULT_LEAD_SOURCES = ["Organico", "Pago"];
 
   const STORAGE_CACHE_KEYS = [
     "crmPax.customStageTypes",
@@ -206,18 +243,15 @@
   }
 
   function getSignupRestrictionMessage() {
-    if (!state.security.allowSelfRegistration) {
-      return "Cadastro publico desabilitado. Somente usuarios liberados pela equipe podem entrar.";
+    if (!state.security.allowedSignupEmailDomains.length) {
+      return "O acesso depende de aprovacao do administrador. Sua solicitacao fica pendente ate a liberacao.";
     }
-
-    if (!state.security.allowedSignupEmailDomains.length) return "";
-    return `Cadastro liberado apenas para e-mails de: ${state.security.allowedSignupEmailDomains.join(", ")}.`;
+    return `Solicitacoes aceitas apenas para e-mails de: ${state.security.allowedSignupEmailDomains.join(", ")}.`;
   }
 
   function applySecurityConfigToUi() {
-    const selfRegistrationEnabled = state.security.allowSelfRegistration;
-    els.registerTabBtn?.classList.toggle("hidden", !selfRegistrationEnabled);
-    els.registerForm?.classList.toggle("hidden", !selfRegistrationEnabled);
+    els.registerTabBtn?.classList.remove("hidden");
+    els.registerForm?.classList.remove("hidden");
     els.registerForm?.classList.remove("active");
     els.loginForm?.classList.add("active");
     document.querySelector('[data-tab="login"]')?.classList.add("active");
@@ -274,6 +308,85 @@
     return hash ? `${baseUrl}${hash}` : baseUrl;
   }
 
+  function getUserRole() {
+    return String(state.profile?.role || USER_ROLE.USER).trim().toLowerCase();
+  }
+
+  function getAccessStatus() {
+    return String(state.profile?.access_status || ACCESS_STATUS.PENDING).trim().toLowerCase();
+  }
+
+  function isAdmin() {
+    return getUserRole() === USER_ROLE.ADMIN;
+  }
+
+  function isApprovedUser() {
+    return getAccessStatus() === ACCESS_STATUS.APPROVED;
+  }
+
+  function canDeleteLeads() {
+    return isAdmin();
+  }
+
+  function canAssignLeadOwner() {
+    return isAdmin();
+  }
+
+  function canManageAdminAreas() {
+    return isAdmin();
+  }
+
+  function canViewHistory() {
+    return isAdmin();
+  }
+
+  function canManageStages() {
+    return isAdmin();
+  }
+
+  function canManageLeadSources() {
+    return isAdmin();
+  }
+
+  function getRoleLabel(role = getUserRole()) {
+    return role === USER_ROLE.ADMIN ? "Administrador" : "Usuario comum";
+  }
+
+  function getAccessStatusLabel(status = getAccessStatus()) {
+    if (status === ACCESS_STATUS.APPROVED) return "Aprovado";
+    if (status === ACCESS_STATUS.REJECTED) return "Recusado";
+    return "Pendente";
+  }
+
+  function getAccessSummaryLabel() {
+    const roleLabel = getRoleLabel();
+    const statusLabel = getAccessStatusLabel();
+    if (isApprovedUser()) return `${roleLabel} liberado`;
+    return `${roleLabel} - ${statusLabel.toLowerCase()}`;
+  }
+
+  function applyRoleBasedUi() {
+    const adminVisible = canManageAdminAreas();
+    document.querySelectorAll("[data-admin-only='true']").forEach((element) => {
+      element.classList.toggle("hidden", !adminVisible);
+    });
+
+    if (els.userAccessLevel) {
+      els.userAccessLevel.textContent = getAccessSummaryLabel();
+    }
+
+    if (els.teamAccessLegend) {
+      els.teamAccessLegend.classList.toggle("hidden", !adminVisible);
+    }
+  }
+
+  async function forceSignOutWithMessage(message) {
+    resetAppState();
+    await state.supabase.auth.signOut();
+    showScreen("authScreen");
+    setMessage(els.authMessage, message, true);
+  }
+
   function showScreen(id) {
     closeAllModals();
     [els.authScreen, els.appScreen].forEach((screen) => screen.classList.add("hidden"));
@@ -289,15 +402,19 @@
     state.hiddenPresetStageTypes = [];
     state.leads = [];
     state.profiles = [];
+    state.accessRequests = [];
+    state.adminRequests = [];
+    state.leadSources = [];
     state.history = [];
     state.activeView = "funil";
     state.historyLoaded = false;
     state.profilesLoaded = false;
+    state.permissionRequestContext = null;
     els.resetPasswordBox?.classList.add("hidden");
   }
 
   function closeAllModals() {
-    [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay].forEach((overlay) => {
+    [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay, els.permissionModalOverlay].forEach((overlay) => {
       overlay?.classList.add("hidden");
     });
     document.body.classList.remove("modal-open");
@@ -324,7 +441,7 @@
     if (!overlay) return;
     overlay.classList.add("hidden");
     overlay.scrollTop = 0;
-    const hasOpenOverlay = [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay]
+    const hasOpenOverlay = [els.modalOverlay, els.stageModalOverlay, els.historyModalOverlay, els.permissionModalOverlay]
       .some((item) => item && !item.classList.contains("hidden"));
     if (!hasOpenOverlay) document.body.classList.remove("modal-open");
   }
@@ -695,6 +812,34 @@
     };
   }
 
+  function normalizeLeadSources(rows = []) {
+    const map = new Map();
+
+    DEFAULT_LEAD_SOURCES.forEach((name) => {
+      const normalizedName = String(name || "").trim();
+      if (!normalizedName) return;
+      map.set(normalizedName.toLowerCase(), {
+        id: normalizedName.toLowerCase(),
+        name: normalizedName
+      });
+    });
+
+    rows.forEach((item) => {
+      const name = String(item?.name || "").trim();
+      if (!name) return;
+      map.set(name.toLowerCase(), {
+        ...item,
+        name
+      });
+    });
+
+    return [...map.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR"));
+  }
+
+  function getLeadSourceNames() {
+    return normalizeLeadSources(state.leadSources).map((item) => item.name);
+  }
+
   function isSignupEmailAllowed(email) {
     if (!state.security.allowedSignupEmailDomains.length) return true;
 
@@ -740,6 +885,7 @@
       lead?.name,
       lead?.contact,
       lead?.owner,
+      lead?.traffic_type,
       lead?.social_source,
       lead?._meta?.legacyText,
       getLeadPlan(lead),
@@ -806,7 +952,8 @@
   function closeFilterDropdowns(except = null) {
     [
       { dropdown: els.ownerFilterDropdown, btn: els.ownerFilterBtn, menu: els.ownerFilterMenu },
-      { dropdown: els.monthFilterDropdown, btn: els.monthFilterBtn, menu: els.monthFilterMenu }
+      { dropdown: els.monthFilterDropdown, btn: els.monthFilterBtn, menu: els.monthFilterMenu },
+      { dropdown: els.leadSourceFilterDropdown, btn: els.leadSourceFilterBtn, menu: els.leadSourceFilterMenu }
     ].forEach((item) => {
       if (!item.dropdown || item.dropdown === except) return;
       item.dropdown.classList.remove("open");
@@ -879,6 +1026,7 @@
   function syncMobileFilterControls() {
     if (els.mobileOwnerFilter) els.mobileOwnerFilter.value = els.ownerFilter?.value || "";
     if (els.mobileMonthFilter) els.mobileMonthFilter.value = els.monthFilter?.value || "";
+    if (els.mobileLeadSourceFilter) els.mobileLeadSourceFilter.value = els.leadSourceFilter?.value || "";
   }
 
   function normalizeMobileFilterTexts() {
@@ -888,8 +1036,11 @@
 
     const ownerDefault = topPanel?.querySelector('#mobileOwnerFilter option[value=""]');
     const monthDefault = topPanel?.querySelector('#mobileMonthFilter option[value=""]');
+    topPanel?.querySelector('label[for="mobileLeadSourceFilter"]')?.replaceChildren("Origem do Lead");
+    const leadSourceDefault = topPanel?.querySelector('#mobileLeadSourceFilter option[value=""]');
     if (ownerDefault) ownerDefault.textContent = "Todos os responsáveis";
     if (monthDefault) monthDefault.textContent = "Todos os meses";
+    if (leadSourceDefault) leadSourceDefault.textContent = "Todas as origens";
   }
 
   function stageTypeLabel(type, customStageType = "") {
@@ -1521,6 +1672,11 @@
   }
 
   async function moveStagePosition(stageId, direction) {
+    if (!canManageStages()) {
+      alert("Somente administradores podem reordenar pipelines.");
+      return;
+    }
+
     const currentIndex = state.stages.findIndex((stage) => stage.id === stageId);
     if (currentIndex === -1) return;
 
@@ -1568,6 +1724,8 @@
 
     if (state.currentUser) {
       await ensureProfile();
+      const accessAllowed = await enforceApprovedSession();
+      if (!accessAllowed) return;
       await enterApp();
       return;
     }
@@ -1593,6 +1751,8 @@
 
     state.currentUser = session.user;
     await ensureProfile();
+    const accessAllowed = await enforceApprovedSession();
+    if (!accessAllowed) return;
     if (els.appScreen.classList.contains("hidden")) {
       await enterApp();
     } else {
@@ -1624,7 +1784,28 @@
       console.error("Erro ao garantir profile:", upsertError);
     }
 
-    state.profile = profile || payload;
+    state.profile = {
+      ...payload,
+      ...profile,
+      role: profile?.role || USER_ROLE.USER,
+      access_status: profile?.access_status || ACCESS_STATUS.PENDING
+    };
+    applyRoleBasedUi();
+  }
+
+  async function enforceApprovedSession() {
+    if (!state.currentUser) return false;
+
+    const status = getAccessStatus();
+    if (status === ACCESS_STATUS.APPROVED) return true;
+
+    if (status === ACCESS_STATUS.REJECTED) {
+      await forceSignOutWithMessage("Seu acesso foi recusado. Solicite nova analise com o administrador.");
+      return false;
+    }
+
+    await forceSignOutWithMessage("Seu acesso ainda esta pendente de aprovacao administrativa.");
+    return false;
   }
 
   async function enterApp() {
@@ -1632,6 +1813,7 @@
     els.orgNameLabel.textContent = "CRM Pax";
     els.mobileOrgName.textContent = "CRM Pax";
     els.userWelcome.textContent = getUserDisplayName();
+    applyRoleBasedUi();
 
     await loadAppData({ includeProfiles: state.profilesLoaded });
     bindView("funil");
@@ -1639,25 +1821,39 @@
 
   async function loadAppData(options = {}) {
     const includeProfiles = options.includeProfiles === true;
-    const [stagesRes, leadsRes, profilesRes, stageTypesRes] = await Promise.all([
+    const includeAdminData = canManageAdminAreas();
+    const [stagesRes, leadsRes, profilesRes, stageTypesRes, leadSourcesRes, accessRequestsRes, adminRequestsRes] = await Promise.all([
       state.supabase.from("stages").select("*").order("position", { ascending: true }),
       state.supabase.from("leads").select("*").order("created_at", { ascending: false }),
       includeProfiles
         ? state.supabase.from("profiles").select("*").order("full_name", { ascending: true })
         : Promise.resolve({ data: state.profiles, error: null }),
-      state.supabase.from("stage_type_catalog").select("name").order("name", { ascending: true })
+      state.supabase.from("stage_type_catalog").select("name").order("name", { ascending: true }),
+      state.supabase.from("lead_source_catalog").select("*").order("name", { ascending: true }),
+      includeAdminData
+        ? state.supabase.from("access_requests").select("*").order("created_at", { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      includeAdminData
+        ? state.supabase.from("admin_requests").select("*").order("created_at", { ascending: false })
+        : Promise.resolve({ data: [], error: null })
     ]);
 
     if (stagesRes.error) console.error(stagesRes.error);
     if (leadsRes.error) console.error(leadsRes.error);
     if (includeProfiles && profilesRes.error) console.error(profilesRes.error);
     if (stageTypesRes.error && !isMissingRelationError(stageTypesRes.error)) console.error(stageTypesRes.error);
+    if (leadSourcesRes.error && !isMissingRelationError(leadSourcesRes.error)) console.error(leadSourcesRes.error);
+    if (includeAdminData && accessRequestsRes.error && !isMissingRelationError(accessRequestsRes.error)) console.error(accessRequestsRes.error);
+    if (includeAdminData && adminRequestsRes.error && !isMissingRelationError(adminRequestsRes.error)) console.error(adminRequestsRes.error);
 
     const firstError =
       stagesRes.error ||
       leadsRes.error ||
       profilesRes.error ||
-      (stageTypesRes.error && !isMissingRelationError(stageTypesRes.error) ? stageTypesRes.error : null);
+      (stageTypesRes.error && !isMissingRelationError(stageTypesRes.error) ? stageTypesRes.error : null) ||
+      (leadSourcesRes.error && !isMissingRelationError(leadSourcesRes.error) ? leadSourcesRes.error : null) ||
+      (accessRequestsRes.error && !isMissingRelationError(accessRequestsRes.error) ? accessRequestsRes.error : null) ||
+      (adminRequestsRes.error && !isMissingRelationError(adminRequestsRes.error) ? adminRequestsRes.error : null);
     if (firstError) {
       alert(`Erro ao carregar dados do Supabase: ${firstError.message}`);
       return;
@@ -1665,6 +1861,7 @@
 
     state.stages = (stagesRes.data || []).map(normalizeStage);
     state.leads = (leadsRes.data || []).map(normalizeLead);
+    state.leadSources = normalizeLeadSources(leadSourcesRes.data || []);
     state.customStageTypes = persistCustomStageTypes([
       ...getStoredCustomStageTypes(),
       ...(stageTypesRes.data || []).map((item) => item?.name)
@@ -1674,6 +1871,8 @@
       state.profiles = profilesRes.data || [];
       state.profilesLoaded = true;
     }
+    state.accessRequests = accessRequestsRes.data || [];
+    state.adminRequests = adminRequestsRes.data || [];
     syncSelectedLeadIds();
 
     if (state.stages.length === 0) {
@@ -1704,6 +1903,13 @@
   }
 
   async function loadHistory(force = false) {
+    if (!canViewHistory()) {
+      state.history = [];
+      state.historyLoaded = true;
+      renderHistoryText();
+      return;
+    }
+
     if (!force && state.historyLoaded) return;
 
     const { data, error } = await state.supabase
@@ -1748,22 +1954,26 @@
     const search = els.searchInput.value.trim().toLowerCase();
     const owner = els.ownerFilter.value;
     const month = options.ignoreMonth ? "" : els.monthFilter.value;
+    const leadSource = els.leadSourceFilter?.value || "";
 
     return state.leads.filter((lead) => {
       const matchesSearch = !search || getLeadSearchText(lead).includes(search);
       const matchesOwner = !owner || lead.owner === owner;
       const matchesMonth = !month || getLeadMonthKey(lead) === month;
+      const matchesLeadSource = !leadSource || String(lead.traffic_type || "") === leadSource;
 
-      return matchesSearch && matchesOwner && matchesMonth;
+      return matchesSearch && matchesOwner && matchesMonth && matchesLeadSource;
     });
   }
 
   function populateFilters() {
     const owners = [...new Set(state.leads.map((x) => x.owner).filter(Boolean))].sort();
     const months = [...new Set(state.leads.map((lead) => getLeadMonthKey(lead)).filter(Boolean))].sort();
+    const leadSources = getLeadSourceNames();
 
     const currentOwner = els.ownerFilter.value;
     const currentMonth = els.monthFilter.value;
+    const currentLeadSource = els.leadSourceFilter?.value || "";
 
     els.ownerFilter.innerHTML =
       '<option value="">Todos os responsáveis</option>' +
@@ -1772,6 +1982,12 @@
     els.monthFilter.innerHTML =
       '<option value="">Todos os meses</option>' +
       months.map((m) => `<option value="${m}">${formatMonthLabel(m)}</option>`).join("");
+
+    if (els.leadSourceFilter) {
+      els.leadSourceFilter.innerHTML =
+        '<option value="">Todas as origens</option>' +
+        leadSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+    }
 
     if (els.mobileOwnerFilter) {
       els.mobileOwnerFilter.innerHTML =
@@ -1785,14 +2001,29 @@
         months.map((m) => `<option value="${m}">${formatMonthLabel(m)}</option>`).join("");
     }
 
+    if (els.mobileLeadSourceFilter) {
+      els.mobileLeadSourceFilter.innerHTML =
+        '<option value="">Todas as origens</option>' +
+        leadSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+    }
+
     els.stage.innerHTML = state.stages
       .map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
       .join("");
+
+    if (els.trafficType) {
+      els.trafficType.innerHTML =
+        '<option value="">Selecione</option>' +
+        leadSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+    }
 
     refreshStageTypeOptions(els.stageType?.value || "andamento");
 
     els.ownerFilter.value = owners.includes(currentOwner) ? currentOwner : "";
     els.monthFilter.value = months.includes(currentMonth) ? currentMonth : "";
+    if (els.leadSourceFilter) {
+      els.leadSourceFilter.value = leadSources.includes(currentLeadSource) ? currentLeadSource : "";
+    }
     syncMobileFilterControls();
 
     renderFilterOptions(
@@ -1809,6 +2040,14 @@
       els.monthFilterLabel,
       "Todos os meses",
       (value) => formatMonthLabel(value)
+    );
+
+    renderFilterOptions(
+      els.leadSourceFilter,
+      els.leadSourceFilterMenu,
+      els.leadSourceFilterLabel,
+      "Todas as origens",
+      (_value, text) => text
     );
   }
 
@@ -1952,10 +2191,12 @@
                   <span>${escapeHtml(stageTypeLabel(stage.stage_type, stage.custom_stage_type))}</span>
                 </div>
               </div>
-              <div class="column-order-actions">
-                <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">&larr;</button>
-                <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">&rarr;</button>
-              </div>
+              ${canManageStages() ? `
+                <div class="column-order-actions">
+                  <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">&larr;</button>
+                  <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">&rarr;</button>
+                </div>
+              ` : ""}
             </div>
             <span class="badge">${leads.length}</span>
           </header>
@@ -1993,6 +2234,21 @@
   }
 
   async function deleteSelectedLeads() {
+    if (!canDeleteLeads()) {
+      requestAdminAuthorization({
+        requestType: "bulk_delete_leads",
+        title: "Solicitar exclusao em lote",
+        description: "Voce nao tem permissao para excluir leads em lote. Envie uma solicitacao para o administrador.",
+        entityType: "lead",
+        entityId: null,
+        payload: {
+          lead_ids: [...state.selectedLeadIds],
+          lead_names: state.leads.filter((lead) => state.selectedLeadIds.has(lead.id)).map((lead) => lead.name)
+        }
+      });
+      return;
+    }
+
     const ids = [...state.selectedLeadIds];
     if (!ids.length) return;
 
@@ -2027,7 +2283,7 @@
     if (!filtered.length) {
       els.leadsTableBody.innerHTML = `
         <tr>
-          <td colspan="10" class="empty-state">Nenhum lead encontrado.</td>
+          <td colspan="11" class="empty-state">Nenhum lead encontrado.</td>
         </tr>
       `;
       updateBulkDeleteButton();
@@ -2051,8 +2307,8 @@
         <td>${escapeHtml(lead.owner || "-")}</td>
         <td>${escapeHtml(getLeadPlanValueText(lead))}</td>
         <td>${formatDate(lead.start_date)}</td>
-        <td>${escapeHtml(lead.social_source || "-")}</td>
         <td>${escapeHtml(lead.traffic_type || "-")}</td>
+        <td>${escapeHtml(lead.social_source || "-")}</td>
         <td>${escapeHtml(getLeadPlanDisplayText(lead))}</td>
         <td>${escapeHtml(getStageName(lead.stage_id))}</td>
         <td>
@@ -2098,14 +2354,30 @@
 
     els.teamList.innerHTML = people.map((profile) => `
       <div class="team-item">
-        <strong>${escapeHtml(profile.full_name || "Usuário")}</strong><br>
-        E-mail: ${escapeHtml(profile.email || "-")}<br>
-        Status: Ativo no CRM compartilhado
+        <div class="team-item-head">
+          <strong>${escapeHtml(profile.full_name || "Usuario")}</strong>
+          <span class="status-chip ${escapeHtml(String(profile.access_status || ACCESS_STATUS.PENDING).toLowerCase())}">${escapeHtml(getAccessStatusLabel(String(profile.access_status || ACCESS_STATUS.PENDING).toLowerCase()))}</span>
+        </div>
+        <div class="team-item-meta">E-mail: ${escapeHtml(profile.email || "-")}</div>
+        <div class="team-item-meta">Nivel: ${escapeHtml(getRoleLabel(String(profile.role || USER_ROLE.USER).toLowerCase()))}</div>
+        ${canManageAdminAreas() ? `
+          <div class="team-item-actions">
+            <select class="team-role-select" data-profile-id="${profile.id}">
+              <option value="${USER_ROLE.USER}" ${String(profile.role || "").toLowerCase() === USER_ROLE.USER ? "selected" : ""}>Usuario comum</option>
+              <option value="${USER_ROLE.ADMIN}" ${String(profile.role || "").toLowerCase() === USER_ROLE.ADMIN ? "selected" : ""}>Administrador</option>
+            </select>
+          </div>
+        ` : ""}
       </div>
-    `).join("") || '<div class="team-item">Nenhum usuário encontrado.</div>';
+    `).join("") || '<div class="team-item">Nenhum usuario encontrado.</div>';
   }
 
   function renderStagesConfig() {
+    if (!canManageStages()) {
+      els.stagesConfigList.innerHTML = '<div class="stage-config-item">Somente administradores podem gerenciar pipelines.</div>';
+      return;
+    }
+
     els.stagesConfigList.innerHTML = state.stages.map((stage, index) => `
       <div class="stage-config-item">
         <div>
@@ -2129,7 +2401,92 @@
     `).join("");
   }
 
+  function renderLeadSourcesConfig() {
+    if (!els.leadSourcesConfigList) return;
+
+    if (!canManageLeadSources()) {
+      els.leadSourcesConfigList.innerHTML = '<div class="saved-stage-types-empty">Somente administradores podem gerenciar origens do lead.</div>';
+      return;
+    }
+
+    const items = getLeadSourceNames();
+    if (!items.length) {
+      els.leadSourcesConfigList.innerHTML = '<div class="saved-stage-types-empty">Nenhuma origem cadastrada.</div>';
+      return;
+    }
+
+    els.leadSourcesConfigList.innerHTML = items.map((name) => `
+      <div class="saved-stage-type">
+        <button type="button" class="saved-stage-type-select" data-source-action="edit" data-source-name="${escapeHtml(name)}">${escapeHtml(name)}</button>
+        <button type="button" class="saved-stage-type-delete" data-source-action="delete" data-source-name="${escapeHtml(name)}">Excluir</button>
+      </div>
+    `).join("");
+  }
+
+  function renderRequests() {
+    if (!els.accessRequestsList || !els.adminRequestsList) return;
+
+    if (!canManageAdminAreas()) {
+      els.accessRequestsList.innerHTML = "";
+      els.adminRequestsList.innerHTML = "";
+      return;
+    }
+
+    const pendingAccessRequests = state.accessRequests.filter((request) => String(request.status || ACCESS_STATUS.PENDING).toLowerCase() === ACCESS_STATUS.PENDING);
+    const pendingAdminRequests = state.adminRequests.filter((request) => String(request.status || ACCESS_STATUS.PENDING).toLowerCase() === ACCESS_STATUS.PENDING);
+
+    const accessCards = pendingAccessRequests.length
+      ? pendingAccessRequests.map((request) => `
+        <article class="request-card">
+          <div class="request-card-head">
+            <div>
+              <strong>${escapeHtml(request.full_name || request.email || "Solicitacao de acesso")}</strong>
+              <div class="request-card-meta">${escapeHtml(request.email || "-")}</div>
+            </div>
+            <span class="status-chip ${escapeHtml(String(request.status || ACCESS_STATUS.PENDING).toLowerCase())}">${escapeHtml(getAccessStatusLabel(String(request.status || ACCESS_STATUS.PENDING).toLowerCase()))}</span>
+          </div>
+          <div class="request-card-meta">Solicitado em: ${request.created_at ? new Date(request.created_at).toLocaleString("pt-BR") : "-"}</div>
+          <div class="request-card-actions">
+            <select data-access-role="${request.id}">
+              <option value="${USER_ROLE.USER}">Usuario comum</option>
+              <option value="${USER_ROLE.ADMIN}">Administrador</option>
+            </select>
+            <button type="button" class="btn btn-primary" data-access-action="approve" data-id="${request.id}">Aprovar</button>
+            <button type="button" class="btn btn-secondary" data-access-action="reject" data-id="${request.id}">Recusar</button>
+          </div>
+        </article>
+      `).join("")
+      : '<div class="request-card request-card-empty">Nenhuma solicitacao de acesso pendente.</div>';
+
+    const adminCards = pendingAdminRequests.length
+      ? pendingAdminRequests.map((request) => `
+        <article class="request-card">
+          <div class="request-card-head">
+            <div>
+              <strong>${escapeHtml(request.title || request.request_type || "Solicitacao operacional")}</strong>
+              <div class="request-card-meta">${escapeHtml(request.requested_by_name || request.requested_by_email || "-")}</div>
+            </div>
+            <span class="status-chip ${escapeHtml(String(request.status || ACCESS_STATUS.PENDING).toLowerCase())}">${escapeHtml(getAccessStatusLabel(String(request.status || ACCESS_STATUS.PENDING).toLowerCase()))}</span>
+          </div>
+          <div class="request-card-meta">${escapeHtml(request.description || "")}</div>
+          ${request.reason ? `<div class="request-card-reason">${escapeHtml(request.reason)}</div>` : ""}
+          <div class="request-card-actions">
+            <button type="button" class="btn btn-primary" data-admin-request-action="approve" data-id="${request.id}">Aprovar</button>
+            <button type="button" class="btn btn-secondary" data-admin-request-action="reject" data-id="${request.id}">Recusar</button>
+          </div>
+        </article>
+      `).join("")
+      : '<div class="request-card request-card-empty">Nenhuma solicitacao operacional registrada.</div>';
+
+    els.accessRequestsList.innerHTML = accessCards;
+    els.adminRequestsList.innerHTML = adminCards;
+  }
+
   function renderHistoryText() {
+    if (!canViewHistory()) {
+      els.historyText.textContent = "Historico disponivel apenas para administradores.";
+      return;
+    }
     if (!state.history.length) {
       els.historyText.textContent = "Nenhum registro de alteração ainda.";
       return;
@@ -2327,7 +2684,12 @@
 
     const lines = text.split(/\r?\n/).filter((line) => line.trim());
     const sample = lines.slice(0, 5).join("\n");
-    const delimiter = (sample.match(/;/g) || []).length > (sample.match(/,/g) || []).length ? ";" : ",";
+    const delimiterScores = [
+      { value: ";", score: (sample.match(/;/g) || []).length },
+      { value: ",", score: (sample.match(/,/g) || []).length },
+      { value: "\t", score: (sample.match(/\t/g) || []).length }
+    ].sort((a, b) => b.score - a.score);
+    const delimiter = delimiterScores[0]?.score ? delimiterScores[0].value : ";";
 
     const rawHeaders = parseCsvLine(lines[0], delimiter);
     const headers = rawHeaders.map(normalizeCsvHeader);
@@ -2341,6 +2703,45 @@
     });
 
     return { headers, rows };
+  }
+
+  async function readFileAsText(file) {
+    const buffer = await file.arrayBuffer();
+    const decoders = [
+      new TextDecoder("utf-8", { fatal: false }),
+      new TextDecoder("windows-1252", { fatal: false }),
+      new TextDecoder("iso-8859-1", { fatal: false })
+    ];
+
+    for (const decoder of decoders) {
+      const text = decoder.decode(buffer);
+      if (/[A-Za-z0-9]/.test(text)) return text;
+    }
+
+    return new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+  }
+
+  async function parseImportedRows(file) {
+    const filename = String(file?.name || "").toLowerCase();
+
+    if (filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
+      const buffer = await file.arrayBuffer();
+      const workbook = window.XLSX?.read(buffer, { type: "array" });
+      const firstSheetName = workbook?.SheetNames?.[0];
+      const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
+      const rows = firstSheet ? window.XLSX.utils.sheet_to_json(firstSheet, { defval: "" }) : [];
+      const normalizedRows = rows.map((row) => {
+        const next = {};
+        Object.entries(row || {}).forEach(([key, value]) => {
+          next[normalizeCsvHeader(key)] = value;
+        });
+        return next;
+      });
+      return { headers: Object.keys(normalizedRows[0] || {}), rows: normalizedRows };
+    }
+
+    const content = await readFileAsText(file);
+    return parseCsv(content);
   }
 
   function csvEscape(value) {
@@ -2414,14 +2815,13 @@
       ].join(";"))
     ];
 
-    downloadTextFile("leads.csv", csvRows.join("\n"), "text/csv;charset=utf-8");
+    downloadTextFile("leads.csv", `\uFEFF${csvRows.join("\n")}`, "text/csv;charset=utf-8");
   }
 
   async function importLeadsFromCsv(file) {
     if (!file) return;
 
-    const content = await file.text();
-    const { rows } = parseCsv(content);
+    const { rows } = await parseImportedRows(file);
 
     if (!rows.length) {
       alert("O CSV está vazio ou inválido.");
@@ -2432,9 +2832,11 @@
       .map((row) => {
         const name = row.nome || row.name || "";
         const contact = row.contato || row.contact || "";
-        const owner = row.responsavel || row.owner || getUserDisplayName();
+        const owner = canAssignLeadOwner()
+          ? (row.responsavel || row.owner || getUserDisplayName())
+          : getUserDisplayName();
         const startDate = row.data_inicio || row.start_date || "";
-        const trafficType = row.origem || row.traffic_type || "Organico";
+        const trafficType = row.origem || row.traffic_type || getLeadSourceNames()[0] || "Organico";
         const legacyText = String(row.observacoes || row.notes || "").trim();
         const plan = String(row.plano || row.plan || "").trim();
 
@@ -2456,10 +2858,10 @@
           })
         };
       })
-      .filter((lead) => lead.name && lead.contact && lead.stage_id);
+      .filter((lead) => lead.name && lead.contact && lead.stage_id && lead.traffic_type);
 
     if (!payload.length) {
-      alert("Nenhuma linha válida encontrada. Use colunas como nome, contato, valor, data_inicio e pipeline.");
+      alert("Nenhuma linha valida encontrada. Use colunas como nome, contato, data_inicio, origem e pipeline.");
       return;
     }
 
@@ -2488,12 +2890,18 @@
 
   function renderAll() {
     syncSelectedLeadIds();
+    applyRoleBasedUi();
+    if (!canManageAdminAreas() && (state.activeView === "solicitacoes" || state.activeView === "configuracoes")) {
+      bindView("funil");
+    }
     populateFilters();
     renderStats();
     renderPipeline();
     renderLeadTable();
     renderTeam();
     renderStagesConfig();
+    renderLeadSourcesConfig();
+    renderRequests();
     renderHistoryText();
     if (state.activeView === "relatorios" && typeof window.Chart !== "undefined") {
       renderCharts();
@@ -2507,10 +2915,12 @@
     els.leadForm.reset();
     els.leadId.value = lead?.id || "";
     els.modalTitle.textContent = lead ? "Editar Lead" : "Novo Lead";
+    els.ownerGroup?.classList.toggle("hidden", !canAssignLeadOwner());
+    els.planGroup?.classList.toggle("hidden", !lead);
 
     els.name.value = lead?.name || "";
     els.contact.value = lead?.contact || "";
-    els.owner.value = lead?.owner || getUserDisplayName();
+    els.owner.value = canAssignLeadOwner() ? (lead?.owner || getUserDisplayName()) : getUserDisplayName();
     if (els.value) els.value.value = "";
     els.startDate.value = lead?.start_date || "";
     els.stage.value = lead?.stage_id || state.stages[0]?.id || "";
@@ -2520,11 +2930,11 @@
       return;
     }
     els.socialSource.value = lead?.social_source || "";
-    els.trafficType.value = lead?.traffic_type || "Organico";
+    els.trafficType.value = lead?.traffic_type || getLeadSourceNames()[0] || "";
     state.modalPlans = getLeadPlans(lead).map((item) => ({ ...item }));
-    if (!state.modalPlans.length && Number(lead?.value || 0) > 0) {
+    if (lead && !state.modalPlans.length && Number(lead?.value || 0) > 0) {
       state.modalPlans = [{ name: getDefaultPlanName(0), value: Number(lead.value || 0) }];
-    } else if (!state.modalPlans.length) {
+    } else if (lead && !state.modalPlans.length) {
       state.modalPlans = [{ name: "Sem plano", value: 0 }];
     }
     state.modalObservations = getLeadObservations(lead);
@@ -2556,6 +2966,10 @@
   }
 
   async function openHistoryModal() {
+    if (!canViewHistory()) {
+      alert("Somente administradores podem visualizar o historico completo.");
+      return;
+    }
     closeAllModals();
     els.historyText.textContent = state.historyLoaded ? els.historyText.textContent : "Carregando histórico...";
     renderHistoryText();
@@ -2565,6 +2979,297 @@
 
   function closeHistoryModal() {
     closeModalOverlay(els.historyModalOverlay);
+  }
+
+  function requestAdminAuthorization(context) {
+    state.permissionRequestContext = context || null;
+    if (!state.permissionRequestContext) return;
+
+    els.permissionModalTitle.textContent = state.permissionRequestContext.title || "Solicitar autorizacao";
+    els.permissionModalText.textContent = state.permissionRequestContext.description || "Esta acao exige aprovacao de um administrador.";
+    if (els.permissionRequestReason) els.permissionRequestReason.value = "";
+    openModalOverlay(els.permissionModalOverlay, "#permissionRequestReason");
+  }
+
+  function closePermissionRequestModal() {
+    state.permissionRequestContext = null;
+    closeModalOverlay(els.permissionModalOverlay);
+  }
+
+  async function submitPermissionRequest() {
+    if (!state.permissionRequestContext || !state.currentUser) return;
+
+    const reason = String(els.permissionRequestReason?.value || "").trim();
+    const payload = {
+      request_type: state.permissionRequestContext.requestType || "manual_authorization",
+      entity_type: state.permissionRequestContext.entityType || null,
+      entity_id: state.permissionRequestContext.entityId ? String(state.permissionRequestContext.entityId) : null,
+      title: state.permissionRequestContext.title || "Solicitacao operacional",
+      description: state.permissionRequestContext.description || "",
+      reason,
+      status: ACCESS_STATUS.PENDING,
+      payload: state.permissionRequestContext.payload || {},
+      requested_by_id: state.currentUser.id,
+      requested_by_name: getUserDisplayName(),
+      requested_by_email: state.currentUser.email
+    };
+
+    const { error } = await state.supabase.from("admin_requests").insert([payload]);
+    if (error) {
+      alert(`Erro ao registrar solicitacao: ${error.message}`);
+      return;
+    }
+
+    closePermissionRequestModal();
+    alert("Solicitacao enviada para a aba Solicitacoes.");
+    await loadAppData({ includeProfiles: state.profilesLoaded });
+  }
+
+  async function updateProfileRole(profileId, nextRole) {
+    if (!canManageAdminAreas() || !profileId) return;
+
+    const role = String(nextRole || USER_ROLE.USER).toLowerCase() === USER_ROLE.ADMIN
+      ? USER_ROLE.ADMIN
+      : USER_ROLE.USER;
+
+    const { error } = await state.supabase
+      .from("profiles")
+      .update({ role })
+      .eq("id", profileId);
+
+    if (error) {
+      alert(`Erro ao atualizar perfil: ${error.message}`);
+      return;
+    }
+
+    if (state.profile?.id === profileId) {
+      state.profile = { ...state.profile, role };
+      applyRoleBasedUi();
+    }
+
+    await loadAppData({ includeProfiles: true });
+  }
+
+  async function approveAccessRequest(requestId, role) {
+    if (!canManageAdminAreas()) return;
+    const request = state.accessRequests.find((item) => item.id === requestId);
+    if (!request) return;
+
+    const approvedRole = String(role || USER_ROLE.USER).toLowerCase() === USER_ROLE.ADMIN
+      ? USER_ROLE.ADMIN
+      : USER_ROLE.USER;
+
+    const profileFilter = request.auth_user_id
+      ? state.supabase.from("profiles").update({
+          access_status: ACCESS_STATUS.APPROVED,
+          role: approvedRole,
+          approved_at: new Date().toISOString(),
+          approved_by: state.currentUser.id
+        }).eq("id", request.auth_user_id)
+      : state.supabase.from("profiles").update({
+          access_status: ACCESS_STATUS.APPROVED,
+          role: approvedRole,
+          approved_at: new Date().toISOString(),
+          approved_by: state.currentUser.id
+        }).eq("email", request.email);
+
+    const { error: profileError } = await profileFilter;
+    if (profileError) {
+      alert(`Erro ao aprovar acesso: ${profileError.message}`);
+      return;
+    }
+
+    const { error } = await state.supabase
+      .from("access_requests")
+      .update({
+        status: ACCESS_STATUS.APPROVED,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: state.currentUser.id,
+        approved_role: approvedRole
+      })
+      .eq("id", requestId);
+
+    if (error) {
+      alert(`Erro ao atualizar solicitacao: ${error.message}`);
+      return;
+    }
+
+    await loadAppData({ includeProfiles: true });
+  }
+
+  async function rejectAccessRequest(requestId) {
+    if (!canManageAdminAreas()) return;
+    const request = state.accessRequests.find((item) => item.id === requestId);
+    if (!request) return;
+
+    const profileFilter = request.auth_user_id
+      ? state.supabase.from("profiles").update({
+          access_status: ACCESS_STATUS.REJECTED,
+          approved_by: state.currentUser.id
+        }).eq("id", request.auth_user_id)
+      : state.supabase.from("profiles").update({
+          access_status: ACCESS_STATUS.REJECTED,
+          approved_by: state.currentUser.id
+        }).eq("email", request.email);
+
+    const { error: profileError } = await profileFilter;
+    if (profileError) {
+      alert(`Erro ao recusar acesso: ${profileError.message}`);
+      return;
+    }
+
+    const { error } = await state.supabase
+      .from("access_requests")
+      .update({
+        status: ACCESS_STATUS.REJECTED,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: state.currentUser.id
+      })
+      .eq("id", requestId);
+
+    if (error) {
+      alert(`Erro ao atualizar solicitacao: ${error.message}`);
+      return;
+    }
+
+    await loadAppData({ includeProfiles: true });
+  }
+
+  async function resolveAdminRequest(requestId, action) {
+    if (!canManageAdminAreas()) return;
+    const request = state.adminRequests.find((item) => item.id === requestId);
+    if (!request) return;
+
+    if (action === "approve") {
+      if (request.request_type === "delete_lead" && request.payload?.lead_id) {
+        const { error: deleteError } = await state.supabase
+          .from("leads")
+          .delete()
+          .eq("id", request.payload.lead_id);
+        if (deleteError) {
+          alert(`Erro ao excluir lead aprovado: ${deleteError.message}`);
+          return;
+        }
+      }
+
+      if (request.request_type === "bulk_delete_leads" && Array.isArray(request.payload?.lead_ids) && request.payload.lead_ids.length) {
+        const { error: deleteError } = await state.supabase
+          .from("leads")
+          .delete()
+          .in("id", request.payload.lead_ids);
+        if (deleteError) {
+          alert(`Erro ao excluir leads aprovados: ${deleteError.message}`);
+          return;
+        }
+      }
+    }
+
+    const nextStatus = action === "approve" ? ACCESS_STATUS.APPROVED : ACCESS_STATUS.REJECTED;
+    const { error } = await state.supabase
+      .from("admin_requests")
+      .update({
+        status: nextStatus,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: state.currentUser.id
+      })
+      .eq("id", requestId);
+
+    if (error) {
+      alert(`Erro ao atualizar solicitacao operacional: ${error.message}`);
+      return;
+    }
+
+    await loadAppData({ includeProfiles: true });
+  }
+
+  async function addLeadSource() {
+    if (!canManageLeadSources()) return;
+
+    const name = String(els.leadSourceName?.value || "").trim();
+    if (!name) {
+      alert("Informe o nome da origem do lead.");
+      return;
+    }
+
+    const { error } = await state.supabase
+      .from("lead_source_catalog")
+      .upsert({ name, created_by: state.currentUser?.id || null }, { onConflict: "name" });
+
+    if (error && !isMissingRelationError(error)) {
+      alert(`Erro ao salvar origem: ${error.message}`);
+      return;
+    }
+
+    if (els.leadSourceName) els.leadSourceName.value = "";
+    await loadAppData({ includeProfiles: state.profilesLoaded });
+  }
+
+  async function editLeadSource(sourceName) {
+    if (!canManageLeadSources()) return;
+
+    const currentName = String(sourceName || "").trim();
+    if (!currentName) return;
+    const nextName = window.prompt("Novo nome para a origem do lead:", currentName);
+    if (!nextName || nextName.trim() === currentName) return;
+
+    const { error: leadError } = await state.supabase
+      .from("leads")
+      .update({ traffic_type: nextName.trim() })
+      .eq("traffic_type", currentName);
+
+    if (leadError) {
+      alert(`Erro ao atualizar leads: ${leadError.message}`);
+      return;
+    }
+
+    const { error: updateError } = await state.supabase
+      .from("lead_source_catalog")
+      .update({ name: nextName.trim() })
+      .eq("name", currentName);
+
+    if (updateError && !isMissingRelationError(updateError)) {
+      alert(`Erro ao atualizar origem: ${updateError.message}`);
+      return;
+    }
+
+    await loadAppData({ includeProfiles: state.profilesLoaded });
+  }
+
+  async function deleteLeadSource(sourceName) {
+    if (!canManageLeadSources()) return;
+
+    const currentName = String(sourceName || "").trim();
+    if (!currentName) return;
+
+    const fallbackName = getLeadSourceNames().find((item) => item !== currentName) || DEFAULT_LEAD_SOURCES[0];
+    if (!fallbackName) {
+      alert("Mantenha ao menos uma origem do lead disponivel.");
+      return;
+    }
+
+    if (!confirm(`Excluir a origem "${currentName}"? Leads existentes serao migrados para "${fallbackName}".`)) return;
+
+    const { error: leadError } = await state.supabase
+      .from("leads")
+      .update({ traffic_type: fallbackName })
+      .eq("traffic_type", currentName);
+
+    if (leadError) {
+      alert(`Erro ao atualizar leads vinculados: ${leadError.message}`);
+      return;
+    }
+
+    const { error } = await state.supabase
+      .from("lead_source_catalog")
+      .delete()
+      .eq("name", currentName);
+
+    if (error && !isMissingRelationError(error)) {
+      alert(`Erro ao excluir origem: ${error.message}`);
+      return;
+    }
+
+    await loadAppData({ includeProfiles: state.profilesLoaded });
   }
 
   async function logChange(action, entityType, entityId, description, payload = null) {
@@ -2599,12 +3304,17 @@
         value: isNoPlanName(name) && rawValue === "" ? 0 : item?.value
       };
     });
-    const draftPlans = cleanPlanList(normalizedModalPlans.map((item) => ({ name: item.name, value: item.value })));
+    const draftPlans = existingLead
+      ? cleanPlanList(normalizedModalPlans.map((item) => ({ name: item.name, value: item.value })))
+      : [];
     const leadValue = getPlansTotalValue(draftPlans);
     const draftObservations = cleanObservationList(state.modalObservations);
+    const resolvedOwner = canAssignLeadOwner()
+      ? els.owner.value.trim()
+      : (existingLead?.owner || getUserDisplayName());
 
     const invalidPlan = normalizedModalPlans.find((item) => item.name && !isNoPlanName(item.name) && String(item?.value ?? "").trim() === "");
-    if (invalidPlan) return alert("Ao adicionar um plano, informe também o valor.");
+    if (existingLead && invalidPlan) return alert("Ao adicionar um plano, informe tambem o valor.");
 
     const payload = {
       assigned_to: state.currentUser.id,
@@ -2612,7 +3322,7 @@
       stage_id: els.stage.value,
       name: els.name.value.trim(),
       contact: els.contact.value.trim(),
-      owner: els.owner.value.trim(),
+      owner: resolvedOwner,
       value: Number.isFinite(leadValue) ? leadValue : 0,
       start_date: normalizeDateInput(els.startDate.value) || els.startDate.value,
       social_source: els.socialSource.value.trim(),
@@ -2627,8 +3337,8 @@
     };
 
     if (!payload.stage_id) return alert("Selecione uma etapa.");
-    if (!payload.name || !payload.contact || !payload.owner || !payload.start_date) {
-      return alert("Preencha os campos obrigatórios.");
+    if (!payload.name || !payload.contact || !payload.owner || !payload.start_date || !payload.traffic_type) {
+      return alert("Preencha os campos obrigatorios.");
     }
 
     let error;
@@ -2683,6 +3393,11 @@
 
   async function submitStage(event) {
     event.preventDefault();
+
+    if (!canManageStages()) {
+      alert("Somente administradores podem alterar pipelines.");
+      return;
+    }
 
     const selectedType = String(els.stageType.value || "andamento").trim();
     const customStageTypeInput = String(els.customStageType?.value || "").trim();
@@ -2779,6 +3494,21 @@
   async function deleteLead(id) {
     const lead = state.leads.find((x) => x.id === id);
     if (!lead) return;
+    if (!canDeleteLeads()) {
+      requestAdminAuthorization({
+        requestType: "delete_lead",
+        title: "Solicitar exclusao de lead",
+        description: `Voce nao tem permissao para excluir o lead "${lead.name}". Sua solicitacao sera enviada para o administrador.`,
+        entityType: "lead",
+        entityId: lead.id,
+        payload: {
+          lead_id: lead.id,
+          lead_name: lead.name,
+          lead_owner: lead.owner || null
+        }
+      });
+      return;
+    }
     if (!confirm(`Excluir o lead "${lead.name}"?`)) return;
 
     const { error } = await state.supabase
@@ -2800,6 +3530,10 @@
   }
 
   async function editStage(id) {
+    if (!canManageStages()) {
+      alert("Somente administradores podem editar pipelines.");
+      return;
+    }
     const stage = state.stages.find((x) => x.id === id);
     if (!stage) return;
     openStageModal(stage);
@@ -2810,6 +3544,20 @@
     const fallback = state.stages.find((x) => x.id !== id);
 
     if (!stage) return;
+    if (!canManageStages()) {
+      requestAdminAuthorization({
+        requestType: "delete_stage",
+        title: "Solicitar exclusao de pipeline",
+        description: `Voce nao tem permissao para excluir a etapa "${stage.name}". Sua solicitacao sera enviada para o administrador.`,
+        entityType: "stage",
+        entityId: stage.id,
+        payload: {
+          stage_id: stage.id,
+          stage_name: stage.name
+        }
+      });
+      return;
+    }
     if (!fallback) return alert("Você precisa manter ao menos uma etapa.");
     if (!confirm(`Excluir a etapa "${stage.name}"?`)) return;
 
@@ -2891,6 +3639,10 @@
   }
 
   function bindView(name) {
+    if ((name === "solicitacoes" || name === "configuracoes") && !canManageAdminAreas()) {
+      name = "funil";
+    }
+
     state.activeView = name;
 
     document.querySelectorAll(".menu-item").forEach((btn) => {
@@ -2904,9 +3656,10 @@
     const titles = {
       funil: ["Pipeline de Vendas", "Gerencie os leads por etapa compartilhada."],
       leads: ["Lista de Leads", "Visualize todos os leads cadastrados."],
-      relatorios: ["Relatórios", "Acompanhe os resultados do CRM compartilhado."],
-      equipe: ["Equipe", "Usuários que já interagiram no CRM."],
-      configuracoes: ["Configurações", "Gerencie as etapas do pipeline compartilhado."]
+      relatorios: ["Relatorios", "Acompanhe os resultados do CRM compartilhado."],
+      equipe: ["Equipe", "Usuarios que ja interagiram no CRM."],
+      solicitacoes: ["Solicitacoes", "Aprove acessos e gerencie pedidos administrativos."],
+      configuracoes: ["Configuracoes", "Gerencie estruturas compartilhadas e listas dinamicas do CRM."]
     };
 
     els.pageTitle.textContent = titles[name][0];
@@ -3029,16 +3782,13 @@
       }
 
       await ensureProfile();
+      if (!(await enforceApprovedSession())) return;
       await enterApp();
     });
 
     els.registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       setMessage(els.authMessage, "");
-
-      if (!state.security.allowSelfRegistration) {
-        return setMessage(els.authMessage, getSignupRestrictionMessage(), true);
-      }
 
       const email = $("registerEmail").value.trim();
       if (!isSignupEmailAllowed(email)) {
@@ -3059,16 +3809,41 @@
 
       if (error) return setMessage(els.authMessage, getAuthErrorMessage(error), true);
 
-      if (data.session?.user) {
-        state.currentUser = data.session.user;
+      const createdUser = data.user || data.session?.user || null;
+      state.currentUser = createdUser;
+
+      if (createdUser) {
         await ensureProfile();
-        await enterApp();
-        $("registerForm").reset();
-        return;
+
+        const requestPayload = {
+          auth_user_id: createdUser.id,
+          full_name,
+          email,
+          status: ACCESS_STATUS.PENDING
+        };
+
+        const { error: requestError } = await state.supabase
+          .from("access_requests")
+          .upsert(requestPayload, { onConflict: "email" });
+
+        if (requestError && !isMissingRelationError(requestError)) {
+          return setMessage(els.authMessage, `Nao foi possivel registrar a solicitacao: ${requestError.message}`, true);
+        }
+
+        try {
+          await state.supabase.functions.invoke("notify-admin-access-request", {
+            body: { email, full_name }
+          });
+        } catch (_error) {
+          // Optional function: the request remains recorded even when notification is unavailable.
+        }
+
+        await state.supabase.auth.signOut();
       }
 
       state.currentUser = null;
-      setMessage(els.authMessage, "Se este e-mail for novo, confirme o cadastro na caixa de entrada antes de entrar. Se ele ja existir, tente recuperar a senha.");
+      resetAppState();
+      setMessage(els.authMessage, "Solicitacao enviada. Aguarde a aprovacao do administrador para acessar o CRM.");
       document.querySelector('[data-tab="login"]').click();
       $("loginEmail").value = email;
       $("loginPassword").value = "";
@@ -3112,9 +3887,15 @@
       renderAll();
     });
 
+    els.mobileLeadSourceFilter?.addEventListener("change", () => {
+      if (els.leadSourceFilter) els.leadSourceFilter.value = els.mobileLeadSourceFilter.value;
+      renderAll();
+    });
+
     els.mobileClearFiltersBtn?.addEventListener("click", () => {
       if (els.ownerFilter) els.ownerFilter.value = "";
       if (els.monthFilter) els.monthFilter.value = "";
+      if (els.leadSourceFilter) els.leadSourceFilter.value = "";
       syncMobileFilterControls();
       renderAll();
     });
@@ -3133,8 +3914,15 @@
       setFilterDropdownOpen(els.monthFilterDropdown, els.monthFilterBtn, els.monthFilterMenu, !isOpen);
     });
 
+    els.leadSourceFilterBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = els.leadSourceFilterDropdown?.classList.contains("open");
+      closeFilterDropdowns(els.leadSourceFilterDropdown);
+      setFilterDropdownOpen(els.leadSourceFilterDropdown, els.leadSourceFilterBtn, els.leadSourceFilterMenu, !isOpen);
+    });
+
     document.addEventListener("click", (e) => {
-      if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target)) return;
+      if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target) || els.leadSourceFilterDropdown?.contains(e.target)) return;
       if (els.mobileFiltersBtn?.contains(e.target) || els.mobileFiltersPanel?.contains(e.target)) return;
       closeFilterDropdowns();
       if (isCompactViewport()) setMobileFiltersOpen(false);
@@ -3165,8 +3953,9 @@
     els.addLeadBtn.addEventListener("click", () => openLeadModal());
     els.addPlanBtn?.addEventListener("click", addPlanFromDraft);
     els.addObservationBtn?.addEventListener("click", addObservationFromDraft);
-    els.addStageBtn.addEventListener("click", openStageModal);
-    els.historyBtn.addEventListener("click", openHistoryModal);
+    els.addStageBtn?.addEventListener("click", openStageModal);
+    els.historyBtn?.addEventListener("click", openHistoryModal);
+    els.addLeadSourceBtn?.addEventListener("click", addLeadSource);
 
     els.closeModalBtn.addEventListener("click", closeLeadModal);
     els.cancelBtn.addEventListener("click", closeLeadModal);
@@ -3179,6 +3968,9 @@
     els.stageType.addEventListener("change", toggleCustomStageTypeField);
     els.removeCustomTypeBtn.addEventListener("click", removeCurrentCustomStageType);
     els.removeSelectedStageTypeBtn?.addEventListener("click", removeCurrentCustomStageType);
+    els.closePermissionModalBtn?.addEventListener("click", closePermissionRequestModal);
+    els.cancelPermissionRequestBtn?.addEventListener("click", closePermissionRequestModal);
+    els.submitPermissionRequestBtn?.addEventListener("click", submitPermissionRequest);
     els.savedStageTypes?.addEventListener("click", async (event) => {
       const selectBtn = event.target.closest("[data-stage-type-value]");
       if (selectBtn) {
@@ -3215,6 +4007,41 @@
       if (stageBtn.dataset.stageAction === "move-right") moveStagePosition(stageId, "right");
     });
 
+    document.addEventListener("click", async (event) => {
+      const accessActionBtn = event.target.closest("[data-access-action]");
+      if (accessActionBtn) {
+        const requestId = accessActionBtn.dataset.id;
+        const roleSelect = document.querySelector(`[data-access-role="${requestId}"]`);
+        if (accessActionBtn.dataset.accessAction === "approve") {
+          await approveAccessRequest(requestId, roleSelect?.value || USER_ROLE.USER);
+        }
+        if (accessActionBtn.dataset.accessAction === "reject") {
+          await rejectAccessRequest(requestId);
+        }
+        return;
+      }
+
+      const adminRequestBtn = event.target.closest("[data-admin-request-action]");
+      if (adminRequestBtn) {
+        await resolveAdminRequest(adminRequestBtn.dataset.id, adminRequestBtn.dataset.adminRequestAction);
+        return;
+      }
+
+      const sourceBtn = event.target.closest("[data-source-action]");
+      if (sourceBtn) {
+        const sourceName = sourceBtn.dataset.sourceName;
+        if (sourceBtn.dataset.sourceAction === "edit") await editLeadSource(sourceName);
+        if (sourceBtn.dataset.sourceAction === "delete") await deleteLeadSource(sourceName);
+      }
+    });
+
+    document.addEventListener("change", async (event) => {
+      const roleSelect = event.target.closest(".team-role-select");
+      if (roleSelect) {
+        await updateProfileRole(roleSelect.dataset.profileId, roleSelect.value);
+      }
+    });
+
     els.closeHistoryModalBtn.addEventListener("click", closeHistoryModal);
     els.refreshHistoryBtn.addEventListener("click", async () => {
       els.historyText.textContent = "Carregando histórico...";
@@ -3224,6 +4051,7 @@
     bindOverlayDismiss(els.modalOverlay, closeLeadModal);
     bindOverlayDismiss(els.stageModalOverlay, closeStageModal);
     bindOverlayDismiss(els.historyModalOverlay, closeHistoryModal);
+    bindOverlayDismiss(els.permissionModalOverlay, closePermissionRequestModal);
 
     state.supabase.auth.onAuthStateChange((event, session) => {
       window.setTimeout(() => {

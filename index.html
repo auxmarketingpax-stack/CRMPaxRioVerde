@@ -9,7 +9,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
   <title>CRM Pax Rio Verde</title>
   <link rel="icon" type="image/png" href="logo_pax_branco.png" />
-  <link rel="stylesheet" href="style.css?v=20260415-02" />
+  <link rel="stylesheet" href="style.css?v=20260509-01" />
 </head>
 <body>
   <div id="bootScreen" class="boot-screen">Carregando sistema...</div>
@@ -18,11 +18,11 @@
     <div class="auth-shell">
       <div class="auth-card">
         <h1>CRM Pax</h1>
-        <p>Todos logam com e-mail e senha e usam o mesmo CRM compartilhado.</p>
+        <p>Acesso controlado por aprovacao administrativa, com perfis, solicitacoes e auditoria centralizada.</p>
 
         <div class="tabs">
           <button class="tab-btn active" data-tab="login" type="button">Entrar</button>
-          <button class="tab-btn" id="registerTabBtn" data-tab="register" type="button">Criar conta</button>
+          <button class="tab-btn" id="registerTabBtn" data-tab="register" type="button">Solicitar Acesso</button>
         </div>
 
         <form id="loginForm" class="tab-panel active">
@@ -46,7 +46,7 @@
           <label for="registerPassword">Senha</label>
           <input type="password" id="registerPassword" autocomplete="new-password" required />
 
-          <button class="btn btn-primary" type="submit">Criar conta</button>
+          <button class="btn btn-primary" type="submit">Enviar solicitacao</button>
         </form>
 
         <div id="registrationNotice" class="security-note hidden"></div>
@@ -65,31 +65,38 @@
   <section id="appScreen" class="screen hidden">
     <div class="mobile-topbar">
       <div class="mobile-topbar-main">
-      <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Abrir menu">☰</button>
-      <div class="mobile-brand-block"><strong id="mobileOrgName">CRM Pax</strong></div>
-      <button type="button" id="mobileFiltersBtn" class="btn btn-secondary mobile-only mobile-filter-icon-btn" aria-label="Abrir filtros"></button>
+        <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Abrir menu">&#9776;</button>
+        <div class="mobile-brand-block"><strong id="mobileOrgName">CRM Pax</strong></div>
+        <button type="button" id="mobileFiltersBtn" class="btn btn-secondary mobile-only mobile-filter-icon-btn" aria-label="Abrir filtros"></button>
       </div>
       <nav class="mobile-nav" aria-label="Menu principal no celular">
         <button class="menu-item mobile-nav-item active" data-view="funil" type="button">Funil</button>
         <button class="menu-item mobile-nav-item" data-view="leads" type="button">Leads</button>
-        <button class="menu-item mobile-nav-item" data-view="relatorios" type="button">Relatórios</button>
+        <button class="menu-item mobile-nav-item" data-view="relatorios" type="button">Relatorios</button>
         <button class="menu-item mobile-nav-item" data-view="equipe" type="button">Equipe</button>
-        <button class="menu-item mobile-nav-item" data-view="configuracoes" type="button">Config.</button>
+        <button class="menu-item mobile-nav-item hidden" data-admin-only="true" data-view="solicitacoes" type="button">Solicit.</button>
+        <button class="menu-item mobile-nav-item hidden" data-admin-only="true" data-view="configuracoes" type="button">Config.</button>
       </nav>
     </div>
 
     <div id="mobileFiltersPanel" class="mobile-filters-panel hidden">
       <div class="mobile-filters-grid">
         <div class="form-group">
-          <label for="mobileOwnerFilter">ResponsÃ¡vel</label>
+          <label for="mobileOwnerFilter">Responsavel</label>
           <select id="mobileOwnerFilter">
-            <option value="">Todos os responsÃ¡veis</option>
+            <option value="">Todos os responsaveis</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="mobileMonthFilter">MÃªs</label>
+          <label for="mobileMonthFilter">Mes</label>
           <select id="mobileMonthFilter">
             <option value="">Todos os meses</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="mobileLeadSourceFilter">Origem do Lead</label>
+          <select id="mobileLeadSourceFilter">
+            <option value="">Todas as origens</option>
           </select>
         </div>
       </div>
@@ -104,21 +111,22 @@
           <div class="brand-logo"><img src="logo_pax_branco.png" alt="Pax Rio Verde" class="brand-logo-img" /></div>
           <div>
             <h1 id="orgNameLabel">CRM Pax</h1>
-            <p id="userWelcome">Usuário</p>
+            <p id="userWelcome">Usuario</p>
           </div>
         </div>
 
         <nav class="menu">
           <button class="menu-item active" data-view="funil" type="button">Funil</button>
           <button class="menu-item" data-view="leads" type="button">Leads</button>
-          <button class="menu-item" data-view="relatorios" type="button">Relatórios</button>
+          <button class="menu-item" data-view="relatorios" type="button">Relatorios</button>
           <button class="menu-item" data-view="equipe" type="button">Equipe</button>
-          <button class="menu-item" data-view="configuracoes" type="button">Configurações</button>
+          <button class="menu-item hidden" data-admin-only="true" data-view="solicitacoes" type="button">Solicitacoes</button>
+          <button class="menu-item hidden" data-admin-only="true" data-view="configuracoes" type="button">Configuracoes</button>
         </nav>
 
         <div class="sidebar-footer">
           <p><strong>Modo:</strong> CRM compartilhado</p>
-          <p><strong>Acesso:</strong> usuários autenticados</p>
+          <p><strong>Acesso:</strong> <span id="userAccessLevel">Carregando...</span></p>
           <button id="logoutBtn" class="btn btn-ghost" type="button">Sair</button>
         </div>
       </aside>
@@ -135,19 +143,19 @@
 
             <div class="filter-dropdown mobile-hidden-control" id="ownerFilterDropdown">
               <button type="button" class="filter-btn" id="ownerFilterBtn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="filter-btn-label" id="ownerFilterLabel">Todos os responsáveis</span>
-                <span class="filter-btn-arrow">▾</span>
+                <span class="filter-btn-label" id="ownerFilterLabel">Todos os responsaveis</span>
+                <span class="filter-btn-arrow">&#9662;</span>
               </button>
-              <div class="filter-menu hidden" id="ownerFilterMenu" role="listbox" aria-label="Filtro de responsáveis"></div>
+              <div class="filter-menu hidden" id="ownerFilterMenu" role="listbox" aria-label="Filtro de responsaveis"></div>
               <select id="ownerFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
-                <option value="">Todos os responsáveis</option>
+                <option value="">Todos os responsaveis</option>
               </select>
             </div>
 
             <div class="filter-dropdown mobile-hidden-control" id="monthFilterDropdown">
               <button type="button" class="filter-btn" id="monthFilterBtn" aria-haspopup="listbox" aria-expanded="false">
                 <span class="filter-btn-label" id="monthFilterLabel">Todos os meses</span>
-                <span class="filter-btn-arrow">▾</span>
+                <span class="filter-btn-arrow">&#9662;</span>
               </button>
               <div class="filter-menu hidden" id="monthFilterMenu" role="listbox" aria-label="Filtro de meses"></div>
               <select id="monthFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
@@ -155,48 +163,39 @@
               </select>
             </div>
 
-            <button type="button" id="importCsvBtn" class="btn btn-secondary mobile-hidden-control">Importar CSV</button>
-            <button type="button" id="exportCsvBtn" class="btn btn-secondary mobile-hidden-control">Exportar CSV</button>
-            <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden" />
+            <div class="filter-dropdown mobile-hidden-control" id="leadSourceFilterDropdown">
+              <button type="button" class="filter-btn" id="leadSourceFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="filter-btn-label" id="leadSourceFilterLabel">Todas as origens</span>
+                <span class="filter-btn-arrow">&#9662;</span>
+              </button>
+              <div class="filter-menu hidden" id="leadSourceFilterMenu" role="listbox" aria-label="Filtro de origem do lead"></div>
+              <select id="leadSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                <option value="">Todas as origens</option>
+              </select>
+            </div>
+
+            <button type="button" id="importCsvBtn" class="btn btn-secondary mobile-hidden-control">Importar</button>
+            <button type="button" id="exportCsvBtn" class="btn btn-secondary mobile-hidden-control">Exportar</button>
+            <input type="file" id="csvFileInput" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" />
             <button type="button" id="deleteSelectedBtn" class="btn btn-danger hidden">Excluir selecionados</button>
-            <button type="button" id="historyBtn" class="btn btn-history">Histórico</button>
+            <button type="button" id="historyBtn" class="btn btn-history hidden" data-admin-only="true">Historico</button>
             <button type="button" id="addLeadBtn" class="btn btn-primary">+ Novo Lead</button>
-            <button type="button" id="addStageBtn" class="btn btn-secondary">+ Pipeline</button>
+            <button type="button" id="addStageBtn" class="btn btn-secondary hidden" data-admin-only="true">+ Pipeline</button>
           </div>
         </header>
-
-        <div id="mobileFiltersPanel" class="mobile-filters-panel hidden">
-          <div class="mobile-filters-grid">
-            <div class="form-group">
-              <label for="mobileOwnerFilter">Responsável</label>
-              <select id="mobileOwnerFilter">
-                <option value="">Todos os responsáveis</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="mobileMonthFilter">Mês</label>
-              <select id="mobileMonthFilter">
-                <option value="">Todos os meses</option>
-              </select>
-            </div>
-          </div>
-          <div class="mobile-filters-actions">
-            <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
-          </div>
-        </div>
 
         <section id="view-funil" class="view active-view">
           <div class="funil-sticky-head" id="funilStickyHead">
             <section class="stats stats-extended" id="metricsSection">
-            <div class="stat-card"><span>Total de Leads</span><strong id="totalLeads">0</strong></div>
-            <div class="stat-card"><span>Receita Fechada</span><strong id="totalValue">R$ 0,00</strong></div>
-            <div class="stat-card"><span>Fechados</span><strong id="closedDeals">0</strong></div>
-            <div class="stat-card"><span>Conversão</span><strong id="conversionRate">0%</strong></div>
-            <div class="stat-card"><span>Ticket Médio</span><strong id="avgTicket">R$ 0,00</strong></div>
-            <div class="stat-card"><span>Leads pagos</span><strong id="paidRate">0</strong></div>
-            <div class="stat-card"><span>Leads orgânicos</span><strong id="organicLeads">0</strong></div>
-            <div class="stat-card"><span>Maior Pipeline</span><strong id="topStage">-</strong></div>
-          </section>
+              <div class="stat-card"><span>Total de Leads</span><strong id="totalLeads">0</strong></div>
+              <div class="stat-card"><span>Receita Fechada</span><strong id="totalValue">R$ 0,00</strong></div>
+              <div class="stat-card"><span>Fechados</span><strong id="closedDeals">0</strong></div>
+              <div class="stat-card"><span>Conversao</span><strong id="conversionRate">0%</strong></div>
+              <div class="stat-card"><span>Ticket Medio</span><strong id="avgTicket">R$ 0,00</strong></div>
+              <div class="stat-card"><span>Leads pagos</span><strong id="paidRate">0</strong></div>
+              <div class="stat-card"><span>Leads organicos</span><strong id="organicLeads">0</strong></div>
+              <div class="stat-card"><span>Maior Pipeline</span><strong id="topStage">-</strong></div>
+            </section>
           </div>
           <div class="pipeline-board-wrap">
             <div class="pipeline-scrollbar-native" id="pipelineScrollTop">
@@ -216,18 +215,18 @@
                 <thead>
                   <tr>
                     <th class="select-col">
-                      <input type="checkbox" id="selectAllLeads" class="lead-check" aria-label="Selecionar todos os leads visíveis" />
+                      <input type="checkbox" id="selectAllLeads" class="lead-check" aria-label="Selecionar todos os leads visiveis" />
                     </th>
                     <th>Nome</th>
                     <th>Contato</th>
-                    <th>Responsável</th>
+                    <th>Responsavel</th>
                     <th>Valores dos planos</th>
-                    <th>Data Início</th>
-                    <th>Rede Social</th>
+                    <th>Data Inicio</th>
                     <th>Origem</th>
+                    <th>Rede Social</th>
                     <th>Plano</th>
                     <th>Pipeline</th>
-                    <th>Ações</th>
+                    <th>Acoes</th>
                   </tr>
                 </thead>
                 <tbody id="leadsTableBody"></tbody>
@@ -238,25 +237,25 @@
 
         <section id="view-relatorios" class="view">
           <div class="panel">
-            <div class="panel-header"><h3>Relatórios</h3></div>
+            <div class="panel-header"><h3>Relatorios</h3></div>
 
             <div class="report-grid report-grid-extended">
               <div class="report-card"><span>Total de leads</span><strong id="reportTotalLeads">0</strong></div>
               <div class="report-card"><span>Fechados</span><strong id="reportClosedDeals">0</strong></div>
-              <div class="report-card"><span>Conversão</span><strong id="reportConversionRate">0%</strong></div>
+              <div class="report-card"><span>Conversao</span><strong id="reportConversionRate">0%</strong></div>
               <div class="report-card"><span>Receita fechada</span><strong id="reportClosedValue">R$ 0,00</strong></div>
-              <div class="report-card"><span>Ticket médio fechado</span><strong id="reportAvgTicket">R$ 0,00</strong></div>
+              <div class="report-card"><span>Ticket medio fechado</span><strong id="reportAvgTicket">R$ 0,00</strong></div>
               <div class="report-card"><span>Leads pagos</span><strong id="reportPaidCount">0</strong></div>
-              <div class="report-card"><span>Leads orgânicos</span><strong id="reportOrganicCount">0</strong></div>
-              <div class="report-card"><span>Maior responsável</span><strong id="reportTopOwner">-</strong></div>
+              <div class="report-card"><span>Leads organicos</span><strong id="reportOrganicCount">0</strong></div>
+              <div class="report-card"><span>Maior responsavel</span><strong id="reportTopOwner">-</strong></div>
               <div class="report-card"><span>Melhor pipeline</span><strong id="reportTopStage">-</strong></div>
-              <div class="report-card"><span>Mês com mais leads</span><strong id="reportBestMonth">-</strong></div>
+              <div class="report-card"><span>Mes com mais leads</span><strong id="reportBestMonth">-</strong></div>
               <div class="report-card"><span>Planos fechados</span><strong id="reportClosedPlans">0</strong></div>
             </div>
 
             <div class="charts-grid charts-grid-extended">
               <div class="chart-card chart-card-annual full-width">
-                <h4 id="yearlyChartTitle">Contatos diários do ano</h4>
+                <h4 id="yearlyChartTitle">Contatos diarios do ano</h4>
                 <canvas id="yearlyDailyChart"></canvas>
               </div>
               <div class="chart-card">
@@ -268,11 +267,11 @@
                 <canvas id="trafficChart"></canvas>
               </div>
               <div class="chart-card">
-                <h4>Receita por Responsável</h4>
+                <h4>Receita por Responsavel</h4>
                 <canvas id="ownerChart"></canvas>
               </div>
               <div class="chart-card">
-                <h4>Evolução mensal</h4>
+                <h4>Evolucao mensal</h4>
                 <canvas id="monthlyChart"></canvas>
               </div>
               <div class="chart-card">
@@ -295,7 +294,7 @@
                 <thead>
                   <tr>
                     <th>Plano</th>
-                    <th>Valor unitário</th>
+                    <th>Valor unitario</th>
                     <th>Quantidade</th>
                     <th>Receita</th>
                   </tr>
@@ -309,16 +308,50 @@
         <section id="view-equipe" class="view">
           <div class="panel">
             <div class="panel-header"><h3>Equipe</h3></div>
+            <p id="teamAccessLegend" class="section-note hidden">Administradores podem ajustar nivel de acesso e acompanhar status de aprovacao.</p>
             <div id="teamList" class="team-list"></div>
           </div>
         </section>
 
-        <section id="view-configuracoes" class="view">
+        <section id="view-solicitacoes" class="view hidden" data-admin-only="true">
+          <div class="panel request-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Solicitacoes de Acesso</h3>
+                <p class="section-note">Cadastros pendentes de aprovacao administrativa.</p>
+              </div>
+            </div>
+            <div id="accessRequestsList" class="requests-grid"></div>
+          </div>
+
+          <div class="panel request-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Solicitacoes Operacionais</h3>
+                <p class="section-note">Pedidos de exclusao e autorizacoes gerados por usuarios comuns.</p>
+              </div>
+            </div>
+            <div id="adminRequestsList" class="requests-grid"></div>
+          </div>
+        </section>
+
+        <section id="view-configuracoes" class="view hidden" data-admin-only="true">
           <div class="panel">
-            <div class="panel-header"><h3>Configurações do Pipeline</h3></div>
+            <div class="panel-header"><h3>Configuracoes Administrativas</h3></div>
+
             <div class="config-box">
-              <p>Todos os usuários autenticados podem editar as etapas do CRM compartilhado.</p>
+              <p>Apenas administradores podem alterar estruturas compartilhadas, catálogos dinamicos e acoes sensiveis do CRM.</p>
               <div id="stagesConfigList" class="stages-config-list"></div>
+            </div>
+
+            <div class="config-box">
+              <div class="panel-header panel-header-tight"><h3>Origem do Lead</h3></div>
+              <p>Lista dinamica usada no cadastro, filtros e relatorios.</p>
+              <div class="config-inline-form">
+                <input type="text" id="leadSourceName" placeholder="Nova origem do lead" />
+                <button type="button" id="addLeadSourceBtn" class="btn btn-secondary">Adicionar origem</button>
+              </div>
+              <div id="leadSourcesConfigList" class="saved-stage-types config-source-list"></div>
             </div>
           </div>
         </section>
@@ -348,13 +381,13 @@
             <input type="text" id="contact" required />
           </div>
 
-          <div class="form-group">
-            <label for="owner">Responsável</label>
+          <div class="form-group" id="ownerGroup">
+            <label for="owner">Responsavel</label>
             <input type="text" id="owner" required />
           </div>
 
           <div class="form-group">
-            <label for="startDate">Data de início</label>
+            <label for="startDate">Data de inicio</label>
             <input type="date" id="startDate" required />
           </div>
 
@@ -364,11 +397,16 @@
           </div>
 
           <div class="form-group">
+            <label for="trafficType">Origem do lead</label>
+            <select id="trafficType" required></select>
+          </div>
+
+          <div class="form-group">
             <label for="socialSource">Rede social de origem</label>
             <input type="text" id="socialSource" />
           </div>
 
-          <div class="form-group form-group-full">
+          <div class="form-group form-group-full hidden" id="planGroup">
             <label>Planos</label>
             <div class="plan-toolbar">
               <button type="button" class="btn btn-secondary" id="addPlanBtn">Adicionar plano</button>
@@ -376,20 +414,12 @@
             <div id="plansList" class="plans-list"></div>
             <datalist id="planSuggestions"></datalist>
           </div>
-
-          <div class="form-group">
-            <label for="trafficType">Origem do lead</label>
-            <select id="trafficType" required>
-              <option value="Organico">Orgânico</option>
-              <option value="Pago">Pago</option>
-            </select>
-          </div>
         </div>
 
         <div class="form-group">
-          <label>Observações</label>
+          <label>Observacoes</label>
           <div class="observation-toolbar">
-            <button type="button" class="btn btn-secondary" id="addObservationBtn">Adicionar observação</button>
+            <button type="button" class="btn btn-secondary" id="addObservationBtn">Adicionar observacao</button>
           </div>
           <div id="observationsList" class="observations-list"></div>
         </div>
@@ -436,11 +466,11 @@
 
         <div class="form-group hidden" id="customStageTypeGroup">
           <label for="customStageType">Personalizado</label>
-          <input type="text" id="customStageType" placeholder="Ex.: pós-venda, retorno, renovação" />
+          <input type="text" id="customStageType" placeholder="Ex.: pos-venda, retorno, renovacao" />
           <div class="custom-type-actions">
             <button type="button" class="btn btn-secondary hidden" id="removeCustomTypeBtn">Remover este tipo</button>
           </div>
-          <small class="helper-text">Você pode criar, editar ou remover um tipo personalizado para este pipeline.</small>
+          <small class="helper-text">Voce pode criar, editar ou remover um tipo personalizado para este pipeline.</small>
         </div>
 
         <div class="form-group" id="savedStageTypesGroup">
@@ -462,7 +492,7 @@
   <div class="crm-modal-overlay hidden" id="historyModalOverlay">
     <div class="crm-modal crm-history-modal">
       <div class="modal-header">
-        <h3>Histórico de Alterações</h3>
+        <h3>Historico de Alteracoes</h3>
         <button class="close-btn" id="closeHistoryModalBtn" type="button">&times;</button>
       </div>
 
@@ -470,13 +500,35 @@
         <div class="history-toolbar">
           <button type="button" class="btn btn-secondary" id="refreshHistoryBtn">Atualizar</button>
         </div>
-        <pre id="historyText" class="history-text">Carregando histórico...</pre>
+        <pre id="historyText" class="history-text">Carregando historico...</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="crm-modal-overlay hidden" id="permissionModalOverlay">
+    <div class="crm-modal crm-small-modal">
+      <div class="modal-header">
+        <h3 id="permissionModalTitle">Solicitar autorizacao</h3>
+        <button class="close-btn" id="closePermissionModalBtn" type="button">&times;</button>
+      </div>
+
+      <div class="history-wrap">
+        <p id="permissionModalText" class="section-note">Esta acao exige aprovacao de um administrador.</p>
+        <div class="form-group">
+          <label for="permissionRequestReason">Motivo da solicitacao</label>
+          <textarea id="permissionRequestReason" rows="4" placeholder="Explique por que essa acao precisa ser executada."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelPermissionRequestBtn">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="submitPermissionRequestBtn">Enviar para Solicitacoes</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="config.js?v=20260415-02"></script>
-  <script src="script.js?v=20260415-02"></script>
+  <script src="script.js?v=20260509-01"></script>
 </body>
 </html>

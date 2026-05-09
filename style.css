@@ -1657,3 +1657,118 @@ input[type="color"]::-moz-color-swatch {
   .column-body{padding:12px;}
   .plan-item-grid{grid-template-columns:1fr;}
 }
+
+.section-note{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.5;
+}
+
+.panel-header-tight{
+  margin-bottom:10px;
+}
+
+.config-inline-form{
+  display:flex;
+  gap:12px;
+  margin:16px 0 18px;
+  flex-wrap:wrap;
+}
+
+.config-inline-form input{
+  flex:1 1 240px;
+}
+
+.config-source-list{
+  margin-top:8px;
+}
+
+.request-panel{
+  margin-bottom:18px;
+}
+
+.requests-grid{
+  display:grid;
+  gap:14px;
+}
+
+.request-card{
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  padding:18px;
+  box-shadow:var(--shadow);
+}
+
+.request-card-empty{
+  color:var(--muted);
+}
+
+.request-card-head,
+.team-item-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+
+.request-card-meta,
+.team-item-meta{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.5;
+}
+
+.request-card-reason{
+  margin-top:10px;
+  padding:12px 14px;
+  border-radius:12px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.06);
+  white-space:pre-wrap;
+}
+
+.request-card-actions,
+.team-item-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+
+.request-card-actions select,
+.team-role-select{
+  min-width:180px;
+}
+
+.status-chip{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.06);
+  font-size:12px;
+  font-weight:700;
+}
+
+.status-chip.pending{
+  color:#fde68a;
+  border-color:rgba(245,158,11,.35);
+  background:rgba(245,158,11,.12);
+}
+
+.status-chip.approved{
+  color:#bbf7d0;
+  border-color:rgba(34,197,94,.35);
+  background:rgba(34,197,94,.14);
+}
+
+.status-chip.rejected{
+  color:#fecaca;
+  border-color:rgba(239,68,68,.35);
+  background:rgba(239,68,68,.14);
+}
