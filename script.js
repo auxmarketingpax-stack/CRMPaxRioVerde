@@ -1048,7 +1048,10 @@
     els.mobileFiltersBtn.classList.toggle("is-open", shouldOpen);
     els.mobileFiltersBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
     els.mobileFiltersBtn.setAttribute("aria-label", shouldOpen ? "Fechar filtros" : "Abrir filtros");
-    requestAnimationFrame(updateStickyLayout);
+    requestAnimationFrame(() => {
+      updateStickyLayout();
+      syncPipelineScrollBars();
+    });
   }
 
   function syncMobileFilterControls() {
@@ -1096,8 +1099,9 @@
     const pipelineScrollbarHeight = els.pipelineScrollTop ? els.pipelineScrollTop.offsetHeight : 0;
     const funilStickyHeight = els.funilStickyHead ? els.funilStickyHead.offsetHeight : (metricsHeight + pipelineScrollbarHeight);
     const pipelineViewportRect = els.pipelineScrollArea?.getBoundingClientRect?.();
-    const pipelineViewportWidth = Math.max(0, Math.floor(pipelineViewportRect?.width || 0));
-    const pipelineViewportLeft = Math.max(0, Math.floor(pipelineViewportRect?.left || 0));
+    const isFunilActive = state.activeView === "funil" && document.getElementById("view-funil")?.classList.contains("active-view");
+    const pipelineViewportWidth = isFunilActive ? Math.max(0, Math.floor(pipelineViewportRect?.width || 0)) : 0;
+    const pipelineViewportLeft = isFunilActive ? Math.max(0, Math.floor(pipelineViewportRect?.left || 0)) : 0;
 
     root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
     root.style.setProperty("--topbar-height", `${topbarHeight}px`);
@@ -1108,6 +1112,15 @@
     root.style.setProperty("--funil-sticky-height", `${funilStickyHeight}px`);
     root.style.setProperty("--pipeline-scrollbar-fixed-left", `${pipelineViewportLeft}px`);
     root.style.setProperty("--pipeline-scrollbar-fixed-width", `${pipelineViewportWidth}px`);
+
+    const topScrollbar = els.pipelineScrollTop;
+    if (topScrollbar) {
+      topScrollbar.style.left = `${pipelineViewportLeft}px`;
+      topScrollbar.style.width = `${pipelineViewportWidth}px`;
+      topScrollbar.style.bottom = "12px";
+      topScrollbar.style.position = "fixed";
+      topScrollbar.style.zIndex = "70";
+    }
   }
 
   function bindOverlayDismiss(overlay, closeFn) {
@@ -1652,20 +1665,26 @@
     const area = els.pipelineScrollArea;
     const top = els.pipelineScrollTop;
     const bottom = els.pipelineScrollBottom;
+    const isFunilActive = state.activeView === "funil" && document.getElementById("view-funil")?.classList.contains("active-view");
     const contentWidth = Math.max(
       area?.scrollWidth || 0,
       els.pipeline?.scrollWidth || 0
     );
     const viewportWidth = Math.floor(area?.getBoundingClientRect().width || area?.clientWidth || 0);
     const hasHorizontalOverflow = (contentWidth - viewportWidth) > 4;
+    const shouldShowTop = hasHorizontalOverflow && isFunilActive;
 
     if (els.pipelineScrollTopInner) els.pipelineScrollTopInner.style.width = `${contentWidth}px`;
     if (els.pipelineScrollBottomInner) els.pipelineScrollBottomInner.style.width = `${contentWidth}px`;
 
     [top, bottom].forEach((bar) => {
       if (!bar) return;
-      bar.classList.toggle("hidden", !hasHorizontalOverflow);
+      bar.classList.toggle("hidden", bar === top ? !shouldShowTop : !hasHorizontalOverflow);
     });
+
+    if (top) {
+      top.style.display = shouldShowTop ? "block" : "none";
+    }
 
     if (!area) return;
 
@@ -2278,7 +2297,10 @@
     }).join("");
 
     bindPipelineEvents();
-    requestAnimationFrame(syncPipelineScrollBars);
+    requestAnimationFrame(() => {
+      syncPipelineScrollBars();
+      updateStickyLayout();
+    });
   }
 
   function updateBulkDeleteButton() {
@@ -4150,7 +4172,10 @@
     attachPipelineScrollEvents();
     window.addEventListener("resize", () => {
       if (!isCompactViewport()) setMobileFiltersOpen(false);
-      requestAnimationFrame(updateStickyLayout);
+      requestAnimationFrame(() => {
+        updateStickyLayout();
+        syncPipelineScrollBars();
+      });
     });
 
     document.addEventListener("click", (event) => {

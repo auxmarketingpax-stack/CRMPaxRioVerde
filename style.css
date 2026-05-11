@@ -648,19 +648,24 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   min-width:0;
+  padding-bottom:48px;
 }
 
 #pipelineScrollTop{
+  display:none;
   position:fixed;
   bottom:12px;
   left:var(--pipeline-scrollbar-fixed-left, 0px);
   width:var(--pipeline-scrollbar-fixed-width, 0px);
-  z-index:30;
+  z-index:70;
   box-sizing:border-box;
-  background:#08120d;
+  padding:2px 0;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(8,18,13,.94);
   backdrop-filter:blur(12px);
   border-radius:12px;
   box-shadow:0 10px 24px rgba(0,0,0,.28);
+  pointer-events:auto;
 }
 
 .pipeline-scroll-area,
@@ -685,7 +690,6 @@ input:focus,select:focus,textarea:focus{
 
 .pipeline-scrollbar-native{
   height:20px;
-  padding:2px 0;
 }
 
 .pipeline-scrollbar-native > div{
@@ -1067,7 +1071,7 @@ input:focus,select:focus,textarea:focus{
     grid-template-columns:1fr;
   }
   #pipelineScrollTop{
-    top:calc(var(--mobile-topbar-height) + var(--topbar-height) + 4px);
+    bottom:12px;
   }
   .card-actions,.table-actions,.stage-config-actions{
     gap:6px;
