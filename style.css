@@ -1021,9 +1021,6 @@ input:focus,select:focus,textarea:focus{
 @media(max-width:1100px){
   .mobile-only{display:inline-flex!important}
   .app{grid-template-columns:1fr}
-  #pipelineScrollTop{
-    display:none!important;
-  }
   .funil-sticky-head{
     display:none;
   }
