@@ -654,7 +654,7 @@ input:focus,select:focus,textarea:focus{
 #pipelineScrollTop{
   display:none;
   position:fixed;
-  bottom:2px;
+  bottom:0px;
   left:var(--pipeline-scrollbar-fixed-left, 0px);
   width:var(--pipeline-scrollbar-fixed-width, 0px);
   z-index:70;
@@ -664,7 +664,6 @@ input:focus,select:focus,textarea:focus{
   padding:0;
   border:none;
   background:#13241b;
-  border-radius:999px;
   box-shadow:none;
   pointer-events:auto;
   overflow:hidden;
