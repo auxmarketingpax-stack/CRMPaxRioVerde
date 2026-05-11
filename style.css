@@ -644,10 +644,10 @@ input:focus,select:focus,textarea:focus{
 .pipeline-board-wrap{
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:0px;
   width:100%;
   max-width:100%;
-  min-width:0;
+  min-width:10;
   padding-bottom:0px;
 }
 
@@ -657,12 +657,12 @@ input:focus,select:focus,textarea:focus{
   bottom:0;
   left:var(--pipeline-scrollbar-fixed-left, 0px);
   width:var(--pipeline-scrollbar-fixed-width, 0px);
-  z-index:80;
+  z-index: 100;
   box-sizing:border-box;
   align-items:stretch;
   height:0px;
   padding:10;
-  border:none;
+  border:none;X
   background:#13241b;
   border-radius:0;
   box-shadow:none;
