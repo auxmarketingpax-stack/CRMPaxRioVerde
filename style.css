@@ -651,15 +651,14 @@ input:focus,select:focus,textarea:focus{
 }
 
 #pipelineScrollTop{
-  position:sticky;
-  top:var(--pipeline-scrollbar-sticky-offset);
-  z-index:30;
+  position:relative;
   width:100%;
   max-width:100%;
   box-sizing:border-box;
   background:#08120d;
   backdrop-filter:blur(12px);
   border-radius:12px;
+  margin-top:8px;
 }
 
 .pipeline-scroll-area,
