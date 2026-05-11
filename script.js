@@ -1119,7 +1119,7 @@
     if (topScrollbar) {
       topScrollbar.style.left = `${pipelineViewportLeft}px`;
       topScrollbar.style.width = `${pipelineViewportWidth}px`;
-      topScrollbar.style.bottom = "12px";
+      topScrollbar.style.bottom = "0px";
       topScrollbar.style.position = "fixed";
       topScrollbar.style.zIndex = "70";
     }
