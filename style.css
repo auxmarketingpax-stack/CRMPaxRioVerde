@@ -659,12 +659,14 @@ input:focus,select:focus,textarea:focus{
   width:var(--pipeline-scrollbar-fixed-width, 0px);
   z-index:70;
   box-sizing:border-box;
-  height:18px;
-  padding:2px;
-  border:1px solid #1a3227;
-  background:#13241b;
-  border-radius:8px;
-  box-shadow:0 10px 24px rgba(0,0,0,.28);
+  display:flex;
+  align-items:center;
+  height:30px;
+  padding:8px 10px;
+  border:1px solid #193026;
+  background:#09140f;
+  border-radius:10px;
+  box-shadow:0 12px 28px rgba(0,0,0,.36);
   pointer-events:auto;
   overflow:hidden;
 }
@@ -690,18 +692,19 @@ input:focus,select:focus,textarea:focus{
   position:relative;
   height:100%;
   overflow:hidden;
-  background:#13241b;
-  border-radius:8px;
+  background:#09140f;
+  border-radius:10px;
   user-select:none;
 }
 
 .pipeline-scrollbar-track{
   position:relative;
   width:100%;
-  height:100%;
+  height:12px;
   background:#13241b;
   border-radius:6px;
   touch-action:none;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
 }
 
 .pipeline-scrollbar-thumb{

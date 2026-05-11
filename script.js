@@ -1716,7 +1716,7 @@
     const area = metrics.area;
     const top = metrics.top;
 
-    if (top) top.style.display = metrics.shouldShowTop ? "block" : "none";
+    if (top) top.style.display = metrics.shouldShowTop ? "flex" : "none";
     if (!area) return;
 
     if (typeof source === "number") {
