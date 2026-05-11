@@ -1712,7 +1712,7 @@
   }
 
   function syncPipelineScrollBars(source = null) {
-    const metrics = getPipelineScrollMetrics();
+    let metrics = getPipelineScrollMetrics();
     const area = metrics.area;
     const top = metrics.top;
 
@@ -1721,6 +1721,12 @@
 
     if (typeof source === "number") {
       area.scrollLeft = Math.min(metrics.maxScrollLeft, Math.max(0, source));
+    }
+
+    // The custom scrollbar track has no measurable width while hidden.
+    // Re-read metrics after making the bar visible so the thumb can be sized.
+    if (metrics.shouldShowTop && !metrics.trackWidth) {
+      metrics = getPipelineScrollMetrics();
     }
 
     updatePipelineScrollThumb(metrics);
