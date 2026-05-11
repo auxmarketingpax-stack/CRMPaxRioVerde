@@ -644,7 +644,7 @@ input:focus,select:focus,textarea:focus{
 .pipeline-board-wrap{
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:0px;
   width:100%;
   max-width:100%;
   min-width:0;
@@ -660,7 +660,7 @@ input:focus,select:focus,textarea:focus{
   z-index:70;
   box-sizing:border-box;
   align-items:stretch;
-  height:12px;
+  height:8px;
   padding:0;
   border:none;
   background:#13241b;
@@ -679,7 +679,7 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   min-width:0;
-  padding-bottom:6px;
+  padding-bottom:0px;
   scrollbar-width:none;
 }
 
@@ -710,7 +710,7 @@ input:focus,select:focus,textarea:focus{
   top:0;
   left:0;
   height:100%;
-  min-width:40px;
+  min-width: 0px;
   background:linear-gradient(135deg,#1f9d55,#22c55e);
   border-radius:0;
   box-shadow:none;
