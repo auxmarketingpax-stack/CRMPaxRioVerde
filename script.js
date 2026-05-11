@@ -1094,16 +1094,16 @@
     const root = document.documentElement;
     if (!root) return;
 
+    const mainRect = document.querySelector(".main")?.getBoundingClientRect?.();
     const mobileTopbarVisible = !!(els.mobileTopbar && window.getComputedStyle(els.mobileTopbar).display !== "none");
     const mobileTopbarHeight = mobileTopbarVisible ? els.mobileTopbar.offsetHeight : 0;
     const topbarHeight = els.topbar ? els.topbar.offsetHeight : 0;
     const metricsHeight = els.metricsSection ? els.metricsSection.offsetHeight : 0;
     const pipelineScrollbarHeight = els.pipelineScrollTop ? els.pipelineScrollTop.offsetHeight : 0;
     const funilStickyHeight = els.funilStickyHead ? els.funilStickyHead.offsetHeight : (metricsHeight + pipelineScrollbarHeight);
-    const pipelineViewportRect = els.pipelineScrollArea?.getBoundingClientRect?.();
     const isFunilActive = state.activeView === "funil" && document.getElementById("view-funil")?.classList.contains("active-view");
-    const pipelineViewportWidth = isFunilActive ? Math.max(0, Math.floor(pipelineViewportRect?.width || 0)) : 0;
-    const pipelineViewportLeft = isFunilActive ? Math.max(0, Math.floor(pipelineViewportRect?.left || 0)) : 0;
+    const pipelineViewportWidth = isFunilActive ? Math.max(0, Math.floor(mainRect?.width || 0)) : 0;
+    const pipelineViewportLeft = isFunilActive ? Math.max(0, Math.floor(mainRect?.left || 0)) : 0;
 
     root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
     root.style.setProperty("--topbar-height", `${topbarHeight}px`);
@@ -1119,7 +1119,7 @@
     if (topScrollbar) {
       topScrollbar.style.left = `${pipelineViewportLeft}px`;
       topScrollbar.style.width = `${pipelineViewportWidth}px`;
-      topScrollbar.style.bottom = "0px";
+      topScrollbar.style.bottom = "2px";
       topScrollbar.style.position = "fixed";
       topScrollbar.style.zIndex = "70";
     }
