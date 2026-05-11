@@ -696,11 +696,7 @@ input:focus,select:focus,textarea:focus{
 }
 
 .pipeline-scrollbar-native > div{
-  display:block;
-  height:100%;
-  min-height:100%;
-  background:#13241b;
-  border-radius:8px;
+  height:1px;
 }
 
 .saved-stage-types{
@@ -769,12 +765,6 @@ input:focus,select:focus,textarea:focus{
 .pipeline-scrollbar-native::-webkit-scrollbar-track-piece{
   background:#13241b;
   border-radius:6px;
-}
-
-.pipeline-scrollbar-native::-webkit-scrollbar-button,
-.pipeline-scrollbar-native::-webkit-scrollbar-corner,
-.pipeline-scrollbar-native::-webkit-resizer{
-  background:#13241b;
 }
 
 .pipeline-scrollbar-native::-webkit-scrollbar-thumb{
