@@ -708,7 +708,7 @@ input:focus,select:focus,textarea:focus{
   position:absolute;
   top:50%;
   left:0;
-  height:9px;
+  height:8px;
   min-width:36px;
   background:linear-gradient(135deg,#1f9d55,#22c55e);
   border-radius:999px;

@@ -2372,7 +2372,7 @@
               <span><strong>Responsável:</strong> ${escapeHtml(lead.owner || "-")}</span>
               <span><strong>Início:</strong> ${formatDate(lead.start_date)}</span>
               <span><strong>Origem:</strong> ${escapeHtml(lead.traffic_type || "-")}</span>
-              <span><strong>Rede:</strong> ${escapeHtml(lead.social_source || "-")}</span>
+              <span><strong>Canal de origem:</strong> ${escapeHtml(lead.social_source || "-")}</span>
             </div>
 
             ${getLeadLatestObservation(lead) ? `<div class="card-notes"><strong>Ultima observacao:</strong> ${escapeHtml(getLeadLatestObservation(lead).text)}${getLeadLatestObservation(lead).date ? `<small>${formatDate(getLeadLatestObservation(lead).date)}</small>` : ""}</div>` : ""}
