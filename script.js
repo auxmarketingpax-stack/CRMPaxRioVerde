@@ -61,8 +61,7 @@
 
     pipelineScrollArea: $("pipelineScrollArea"),
     pipelineScrollTop: $("pipelineScrollTop"),
-    pipelineScrollTopTrack: $("pipelineScrollTopTrack"),
-    pipelineScrollTopThumb: $("pipelineScrollTopThumb"),
+    pipelineScrollTopInner: $("pipelineScrollTopInner"),
     pipelineScrollBottom: $("pipelineScrollBottom"),
     pipelineScrollBottomInner: $("pipelineScrollBottomInner"),
     pipeline: $("pipeline"),
@@ -190,8 +189,7 @@
       planCount: null,
       planRevenue: null
     },
-    pipelineScrollObserver: null,
-    pipelineScrollbarDrag: null
+    pipelineScrollObserver: null
   };
 
   const PRESET_STAGE_TYPES = [
@@ -1663,160 +1661,48 @@
     });
   }
 
-  function getPipelineScrollMetrics() {
+  function syncPipelineScrollBars(source = null) {
     const area = els.pipelineScrollArea;
     const top = els.pipelineScrollTop;
+    const bottom = els.pipelineScrollBottom;
     const isFunilActive = state.activeView === "funil" && document.getElementById("view-funil")?.classList.contains("active-view");
     const contentWidth = Math.max(
       area?.scrollWidth || 0,
       els.pipeline?.scrollWidth || 0
     );
     const viewportWidth = Math.floor(area?.getBoundingClientRect().width || area?.clientWidth || 0);
-    const maxScrollLeft = Math.max(0, contentWidth - viewportWidth);
-    const hasHorizontalOverflow = maxScrollLeft > 4;
+    const hasHorizontalOverflow = (contentWidth - viewportWidth) > 4;
     const shouldShowTop = hasHorizontalOverflow && isFunilActive;
-    const trackWidth = Math.floor(els.pipelineScrollTopTrack?.getBoundingClientRect().width || top?.clientWidth || 0);
 
-    return {
-      area,
-      top,
-      contentWidth,
-      viewportWidth,
-      maxScrollLeft,
-      hasHorizontalOverflow,
-      shouldShowTop,
-      trackWidth
-    };
-  }
+    if (els.pipelineScrollTopInner) els.pipelineScrollTopInner.style.width = `${contentWidth}px`;
+    if (els.pipelineScrollBottomInner) els.pipelineScrollBottomInner.style.width = `${contentWidth}px`;
 
-  function updatePipelineScrollThumb(metrics = getPipelineScrollMetrics()) {
-    const thumb = els.pipelineScrollTopThumb;
-    if (!thumb) return;
-
-    if (!metrics.shouldShowTop || !metrics.trackWidth || !metrics.viewportWidth || metrics.contentWidth <= metrics.viewportWidth) {
-      thumb.style.width = "0px";
-      thumb.style.transform = "translateX(0)";
-      return;
-    }
-
-    const area = metrics.area;
-    const scrollLeft = Math.min(metrics.maxScrollLeft, Math.max(0, area?.scrollLeft || 0));
-    const thumbWidth = Math.max(48, Math.round((metrics.viewportWidth / metrics.contentWidth) * metrics.trackWidth));
-    const maxThumbOffset = Math.max(0, metrics.trackWidth - thumbWidth);
-    const thumbOffset = metrics.maxScrollLeft > 0
-      ? Math.round((scrollLeft / metrics.maxScrollLeft) * maxThumbOffset)
-      : 0;
-
-    thumb.style.width = `${thumbWidth}px`;
-    thumb.style.transform = `translateX(${thumbOffset}px)`;
-  }
-
-  function syncPipelineScrollBars(source = null) {
-    let metrics = getPipelineScrollMetrics();
-    const area = metrics.area;
-    const top = metrics.top;
+    [top, bottom].forEach((bar) => {
+      if (!bar) return;
+      bar.classList.toggle("hidden", bar === top ? !shouldShowTop : !hasHorizontalOverflow);
+    });
 
     if (top) {
-      top.style.display = metrics.shouldShowTop ? "block" : "none";
-      if (metrics.shouldShowTop) {
-        metrics = getPipelineScrollMetrics();
-      }
+      top.style.display = shouldShowTop ? "block" : "none";
     }
     if (!area) return;
 
-    if (typeof source === "number") {
-      area.scrollLeft = Math.min(metrics.maxScrollLeft, Math.max(0, source));
-    }
-
-    updatePipelineScrollThumb(metrics);
-  }
-
-  function setPipelineScrollFromPointer(clientX) {
-    const metrics = getPipelineScrollMetrics();
-    const track = els.pipelineScrollTopTrack;
-    const thumb = els.pipelineScrollTopThumb;
-    if (!metrics.area || !track || !thumb || !metrics.maxScrollLeft || !metrics.trackWidth) return;
-
-    const rect = track.getBoundingClientRect();
-    const thumbWidth = Math.max(thumb.offsetWidth || 0, 48);
-    const maxThumbOffset = Math.max(0, rect.width - thumbWidth);
-    const targetOffset = Math.min(
-      maxThumbOffset,
-      Math.max(0, (clientX - rect.left) - (thumbWidth / 2))
-    );
-    const nextScrollLeft = maxThumbOffset > 0
-      ? (targetOffset / maxThumbOffset) * metrics.maxScrollLeft
-      : 0;
-
-    syncPipelineScrollBars(nextScrollLeft);
-  }
-
-  function startPipelineScrollbarDrag(event) {
-    if (event.button !== 0) return;
-
-    const metrics = getPipelineScrollMetrics();
-    if (!metrics.shouldShowTop || !metrics.maxScrollLeft) return;
-
-    state.pipelineScrollbarDrag = {
-      pointerId: event.pointerId,
-      startClientX: event.clientX,
-      startScrollLeft: metrics.area?.scrollLeft || 0
-    };
-
-    els.pipelineScrollTopThumb?.setPointerCapture?.(event.pointerId);
-    event.preventDefault();
-  }
-
-  function stopPipelineScrollbarDrag(event) {
-    const drag = state.pipelineScrollbarDrag;
-    if (!drag) return;
-    if (event?.pointerId !== undefined && drag.pointerId !== event.pointerId) return;
-
-    try {
-      els.pipelineScrollTopThumb?.releasePointerCapture?.(drag.pointerId);
-    } catch (_error) {
-      // Ignore release failures when capture was already lost.
-    }
-
-    state.pipelineScrollbarDrag = null;
-  }
-
-  function handlePipelineScrollbarDrag(event) {
-    const drag = state.pipelineScrollbarDrag;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-
-    const metrics = getPipelineScrollMetrics();
-    const track = els.pipelineScrollTopTrack;
-    const thumb = els.pipelineScrollTopThumb;
-    if (!metrics.maxScrollLeft || !track || !thumb) return;
-
-    const thumbWidth = Math.max(thumb.offsetWidth || 0, 48);
-    const maxThumbOffset = Math.max(1, track.clientWidth - thumbWidth);
-    const deltaX = event.clientX - drag.startClientX;
-    const scrollDelta = (deltaX / maxThumbOffset) * metrics.maxScrollLeft;
-
-    syncPipelineScrollBars(drag.startScrollLeft + scrollDelta);
-    event.preventDefault();
+    const left = source?.scrollLeft ?? area.scrollLeft;
+    if (source !== area) area.scrollLeft = left;
+    if (top && source !== top) top.scrollLeft = left;
+    if (bottom && source !== bottom) bottom.scrollLeft = left;
   }
 
   function attachPipelineScrollEvents() {
     const area = els.pipelineScrollArea;
-    const track = els.pipelineScrollTopTrack;
-    const thumb = els.pipelineScrollTopThumb;
+    const top = els.pipelineScrollTop;
+    const bottom = els.pipelineScrollBottom;
     if (!area) return;
 
-    area.addEventListener("scroll", () => syncPipelineScrollBars());
+    area.addEventListener("scroll", () => syncPipelineScrollBars(area));
+    top?.addEventListener("scroll", () => syncPipelineScrollBars(top));
+    bottom?.addEventListener("scroll", () => syncPipelineScrollBars(bottom));
     window.addEventListener("resize", () => syncPipelineScrollBars());
-    track?.addEventListener("pointerdown", (event) => {
-      if (event.target === thumb) return;
-      if (event.button !== 0) return;
-      setPipelineScrollFromPointer(event.clientX);
-      event.preventDefault();
-    });
-    thumb?.addEventListener("pointerdown", startPipelineScrollbarDrag);
-    thumb?.addEventListener("pointermove", handlePipelineScrollbarDrag);
-    thumb?.addEventListener("pointerup", stopPipelineScrollbarDrag);
-    thumb?.addEventListener("pointercancel", stopPipelineScrollbarDrag);
 
     if (typeof ResizeObserver === "function" && !state.pipelineScrollObserver) {
       state.pipelineScrollObserver = new ResizeObserver(() => {
