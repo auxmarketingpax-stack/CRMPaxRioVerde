@@ -3857,16 +3857,10 @@
 
         if (requestError && !isMissingRelationError(requestError)) {
           if (isDuplicateKeyError(requestError)) {
-            state.currentUser = null;
-            resetAppState();
-            setMessage(els.authMessage, "Ja existe uma solicitacao para este e-mail. Aguarde a analise do administrador.");
-            document.querySelector('[data-tab="login"]').click();
-            $("loginEmail").value = email;
-            $("loginPassword").value = "";
-            $("registerForm").reset();
-            return;
+            // The backend may create the access request automatically on signup.
+          } else {
+            return setMessage(els.authMessage, `Nao foi possivel registrar a solicitacao: ${requestError.message}`, true);
           }
-          return setMessage(els.authMessage, `Nao foi possivel registrar a solicitacao: ${requestError.message}`, true);
         }
 
         try {
@@ -3880,6 +3874,10 @@
         if (hasSession) {
           await state.supabase.auth.signOut();
         }
+      }
+
+      if (!createdUser) {
+        return setMessage(els.authMessage, "O cadastro foi recebido, mas nao foi possivel confirmar a solicitacao de acesso. Tente novamente.", true);
       }
 
       state.currentUser = null;
