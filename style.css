@@ -648,7 +648,7 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   min-width:0;
-  padding-bottom:14px;
+  padding-bottom:0px;
 }
 
 #pipelineScrollTop{
@@ -660,7 +660,7 @@ input:focus,select:focus,textarea:focus{
   z-index:70;
   box-sizing:border-box;
   align-items:stretch;
-  height:12px;
+  height:0px;
   padding:0;
   border:none;
   background:#13241b;
@@ -679,7 +679,7 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   min-width:0;
-  padding-bottom:6px;
+  padding-bottom:0px;
   scrollbar-width:none;
 }
 
