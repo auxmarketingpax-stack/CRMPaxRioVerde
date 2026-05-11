@@ -687,13 +687,21 @@
       .map((item) => {
         const name = String(item?.name || "").trim();
         const value = parseMonetaryValue(item?.value);
+        const contractNumber = String(item?.contract_number || item?.contractNumber || "").trim();
+        const closedAt = normalizeDateInput(item?.closed_at || item?.closedAt || "") || "";
 
         return {
           name,
-          value: Number.isFinite(value) ? value : 0
+          value: Number.isFinite(value) ? value : 0,
+          contract_number: contractNumber,
+          closed_at: closedAt
         };
       })
       .filter((item) => item.name);
+  }
+
+  function planSupportsClosingDetails(plan = {}) {
+    return !isNoPlanName(plan?.name) && Number(parseMonetaryValue(plan?.value)) > 0;
   }
 
   function getDefaultPlanName(index = 0) {
@@ -1510,6 +1518,15 @@
           <input type="text" class="plan-name-input" placeholder="Nome do plano" list="planSuggestions" value="${escapeHtml(item.name || "")}" />
           <input type="text" class="plan-value-input" placeholder="Valor do plano" inputmode="decimal" value="${escapeHtml(formatPlanInputValue(item.value))}" />
         </div>
+        ${planSupportsClosingDetails(item) ? `
+          <div class="plan-item-extra">
+            <div class="plan-item-extra-title">Dados do fechamento</div>
+            <div class="plan-item-extra-grid">
+              <input type="text" class="plan-contract-input" placeholder="Numero do contrato" value="${escapeHtml(item.contract_number || "")}" />
+              <input type="date" class="plan-closed-date-input" value="${escapeHtml(item.closed_at || "")}" />
+            </div>
+          </div>
+        ` : ""}
         <div class="plan-item-actions">
           <button type="button" class="btn btn-danger plan-remove-btn">Excluir</button>
         </div>
@@ -1535,11 +1552,28 @@
         return;
       }
       if (event.target.classList.contains("plan-name-input")) {
+        const hadClosingDetails = planSupportsClosingDetails(state.modalPlans[index]);
         state.modalPlans[index].name = event.target.value;
-        if (syncPlanDraftWithCatalog(index)) renderPlanItems();
+        if (syncPlanDraftWithCatalog(index) || hadClosingDetails !== planSupportsClosingDetails(state.modalPlans[index])) {
+          renderPlanItems();
+        }
+        return;
       }
       if (event.target.classList.contains("plan-value-input")) {
+        const hadClosingDetails = planSupportsClosingDetails(state.modalPlans[index]);
         state.modalPlans[index].value = event.target.value;
+        if (hadClosingDetails !== planSupportsClosingDetails(state.modalPlans[index])) {
+          renderPlanItems();
+          return;
+        }
+        return;
+      }
+      if (event.target.classList.contains("plan-contract-input")) {
+        state.modalPlans[index].contract_number = event.target.value;
+        return;
+      }
+      if (event.target.classList.contains("plan-closed-date-input")) {
+        state.modalPlans[index].closed_at = normalizeDateInput(event.target.value);
       }
     };
 
@@ -3369,13 +3403,21 @@
     const normalizedModalPlans = state.modalPlans.map((item) => {
       const name = String(item?.name || "").trim();
       const rawValue = String(item?.value ?? "").trim();
+      const supportsClosingDetails = !isNoPlanName(name) && Number(parseMonetaryValue(item?.value)) > 0;
       return {
         name,
-        value: isNoPlanName(name) && rawValue === "" ? 0 : item?.value
+        value: isNoPlanName(name) && rawValue === "" ? 0 : item?.value,
+        contract_number: supportsClosingDetails ? String(item?.contract_number || "").trim() : "",
+        closed_at: supportsClosingDetails ? (normalizeDateInput(item?.closed_at || "") || "") : ""
       };
     });
     const draftPlans = existingLead
-      ? cleanPlanList(normalizedModalPlans.map((item) => ({ name: item.name, value: item.value })))
+      ? cleanPlanList(normalizedModalPlans.map((item) => ({
+          name: item.name,
+          value: item.value,
+          contract_number: item.contract_number,
+          closed_at: item.closed_at
+        })))
       : [];
     const leadValue = getPlansTotalValue(draftPlans);
     const draftObservations = cleanObservationList(state.modalObservations);

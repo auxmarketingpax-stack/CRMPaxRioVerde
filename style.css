@@ -788,6 +788,26 @@ input:focus,select:focus,textarea:focus{
   gap:12px;
 }
 
+.plan-item-extra{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px dashed var(--border);
+}
+
+.plan-item-extra-title{
+  margin-bottom:8px;
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.plan-item-extra-grid{
+  display:grid;
+  grid-template-columns:1fr 190px;
+  gap:12px;
+}
+
 .plan-item-actions{
   margin-top:10px;
   display:flex;
@@ -1656,6 +1676,7 @@ input[type="color"]::-moz-color-swatch {
   .column-header{padding:12px;}
   .column-body{padding:12px;}
   .plan-item-grid{grid-template-columns:1fr;}
+  .plan-item-extra-grid{grid-template-columns:1fr;}
 }
 
 .section-note{
