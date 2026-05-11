@@ -243,6 +243,9 @@
   }
 
   function getSignupRestrictionMessage() {
+    if (!state.security.allowSelfRegistration) {
+      return "Novas solicitacoes publicas estao desativadas. Solicite a liberacao diretamente a um administrador.";
+    }
     if (!state.security.allowedSignupEmailDomains.length) {
       return "O acesso depende de aprovacao do administrador. Sua solicitacao fica pendente ate a liberacao.";
     }
@@ -250,8 +253,10 @@
   }
 
   function applySecurityConfigToUi() {
-    els.registerTabBtn?.classList.remove("hidden");
-    els.registerForm?.classList.remove("hidden");
+    const registrationEnabled = state.security.allowSelfRegistration;
+
+    els.registerTabBtn?.classList.toggle("hidden", !registrationEnabled);
+    els.registerForm?.classList.toggle("hidden", !registrationEnabled);
     els.registerForm?.classList.remove("active");
     els.loginForm?.classList.add("active");
     document.querySelector('[data-tab="login"]')?.classList.add("active");
@@ -3803,6 +3808,10 @@
     els.registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       setMessage(els.authMessage, "");
+
+      if (!state.security.allowSelfRegistration) {
+        return setMessage(els.authMessage, getSignupRestrictionMessage(), true);
+      }
 
       const email = $("registerEmail").value.trim();
       if (!isSignupEmailAllowed(email)) {
