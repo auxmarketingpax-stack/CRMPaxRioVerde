@@ -2386,6 +2386,15 @@
               <option value="${USER_ROLE.USER}" ${String(profile.role || "").toLowerCase() === USER_ROLE.USER ? "selected" : ""}>Usuario comum</option>
               <option value="${USER_ROLE.ADMIN}" ${String(profile.role || "").toLowerCase() === USER_ROLE.ADMIN ? "selected" : ""}>Administrador</option>
             </select>
+            <button
+              type="button"
+              class="delete-btn"
+              data-team-action="delete"
+              data-profile-id="${profile.id}"
+              ${state.currentUser?.id === profile.id ? "disabled" : ""}
+            >
+              Excluir
+            </button>
           </div>
         ` : ""}
       </div>
@@ -3068,6 +3077,47 @@
     }
 
     await loadAppData({ includeProfiles: true });
+  }
+
+  async function deleteTeamMember(profileId) {
+    if (!canManageAdminAreas() || !profileId) return;
+
+    const profile = state.profiles.find((item) => item.id === profileId);
+    if (!profile) {
+      alert("Usuario nao encontrado.");
+      return;
+    }
+
+    if (state.currentUser?.id === profileId) {
+      alert("Voce nao pode excluir o proprio usuario.");
+      return;
+    }
+
+    const label = profile.full_name || profile.email || "este usuario";
+    if (!window.confirm(`Excluir ${label}? Esta acao remove o acesso ao CRM permanentemente.`)) {
+      return;
+    }
+
+    const { data, error } = await state.supabase.functions.invoke("admin-delete-user", {
+      body: { profileId }
+    });
+
+    const message = data?.error || error?.message;
+    if (error || data?.error) {
+      alert(`Erro ao excluir usuario: ${message || "Falha desconhecida."}`);
+      return;
+    }
+
+    await logChange(
+      "delete_user",
+      "profile",
+      profileId,
+      `Usuario removido: ${profile.full_name || profile.email || profileId}`,
+      { email: profile.email || null, role: profile.role || null }
+    );
+
+    await loadAppData({ includeProfiles: true });
+    alert("Usuario excluido com sucesso.");
   }
 
   async function approveAccessRequest(requestId, role) {
@@ -4072,6 +4122,14 @@
         const sourceName = sourceBtn.dataset.sourceName;
         if (sourceBtn.dataset.sourceAction === "edit") await editLeadSource(sourceName);
         if (sourceBtn.dataset.sourceAction === "delete") await deleteLeadSource(sourceName);
+        return;
+      }
+
+      const teamActionBtn = event.target.closest("[data-team-action]");
+      if (teamActionBtn) {
+        if (teamActionBtn.dataset.teamAction === "delete") {
+          await deleteTeamMember(teamActionBtn.dataset.profileId);
+        }
       }
     });
 
