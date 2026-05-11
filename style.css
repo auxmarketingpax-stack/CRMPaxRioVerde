@@ -644,7 +644,7 @@ input:focus,select:focus,textarea:focus{
 .pipeline-board-wrap{
   display:flex;
   flex-direction:column;
-  gap:0px;
+  gap:10px;
   width:100%;
   max-width:100%;
   min-width:0;
@@ -678,7 +678,7 @@ input:focus,select:focus,textarea:focus{
 .pipeline-scroll-area{
   width:100%;
   max-width:100%;
-  min-width:10;
+  min-width:0;
   padding-bottom:0px;
   scrollbar-width:none;
 }
