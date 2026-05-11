@@ -651,7 +651,9 @@ input:focus,select:focus,textarea:focus{
 }
 
 #pipelineScrollTop{
-  position:relative;
+  position:sticky;
+  bottom:12px;
+  z-index:30;
   width:100%;
   max-width:100%;
   box-sizing:border-box;
@@ -659,6 +661,7 @@ input:focus,select:focus,textarea:focus{
   backdrop-filter:blur(12px);
   border-radius:12px;
   margin-top:8px;
+  box-shadow:0 10px 24px rgba(0,0,0,.28);
 }
 
 .pipeline-scroll-area,
