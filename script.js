@@ -293,6 +293,14 @@
       return "Este e-mail ja esta cadastrado. Tente entrar ou recuperar a senha.";
     }
 
+    if (
+      code === "over_email_send_rate_limit" ||
+      message.includes("email rate limit exceeded") ||
+      message.includes("rate limit exceeded")
+    ) {
+      return "O Supabase atingiu o limite temporario de envio de e-mails. Aguarde alguns minutos e tente novamente, ou configure um SMTP proprio no projeto.";
+    }
+
     if (code === "email_address_not_authorized" || message.includes("email address not authorized")) {
       return "O Supabase nao vai enviar e-mails para esse endereco usando o SMTP padrao. Configure um SMTP proprio ou teste com um e-mail da equipe do projeto.";
     }
