@@ -2824,6 +2824,7 @@
     return (
       row.stage_id ||
       stageIdByName(row.pipeline) ||
+      stageIdByName(row.status) ||
       stageIdByName(row.etapa) ||
       stageIdByName(row.stage) ||
       state.stages[0]?.id ||
@@ -2896,12 +2897,24 @@
         const name = row.nome || row.name || "";
         const contact = row.contato || row.contact || "";
         const owner = canAssignLeadOwner()
-          ? (row.responsavel || row.owner || getUserDisplayName())
+          ? (row.responsavel || row.vendedor || row.owner || getUserDisplayName())
           : getUserDisplayName();
-        const startDate = row.data_inicio || row.start_date || "";
+        const startDate = row.data_inicio || row.start_date || row.data || "";
         const trafficType = row.origem || row.traffic_type || getLeadSourceNames()[0] || "Organico";
         const legacyText = String(row.observacoes || row.notes || "").trim();
+        const importedValue = parseMoney(row.quantidade || row.valor || row.value || 0);
+        const importedContractNumber = String(row.contrato || row.numero_contrato || row.contract_number || "").trim();
+        const importedClosedAt = normalizeDateInput(row.data_fechamento || row.fechado_em || row.data || "") || "";
         const plan = String(row.plano || row.plan || "").trim();
+        const planName = plan || (importedValue > 0 ? getDefaultPlanName(0) : "");
+        const plans = planName
+          ? [{
+              name: planName,
+              value: importedValue,
+              contract_number: importedContractNumber,
+              closed_at: importedClosedAt
+            }]
+          : [];
 
         return {
           stage_id: inferStageId(row),
@@ -2910,12 +2923,13 @@
           name: String(name).trim(),
           contact: String(contact).trim(),
           owner: String(owner).trim(),
-          value: parseMoney(row.valor || row.value || 0),
+          value: importedValue,
           start_date: normalizeDateInput(startDate) || startDate,
           social_source: String(row.rede_social || row.social_source || "").trim(),
           traffic_type: String(trafficType).trim(),
           notes: serializeLeadMeta({
-            plan,
+            plan: planName,
+            plans,
             legacyText,
             observations: legacyText ? [{ date: "", text: legacyText }] : []
           })
