@@ -518,6 +518,12 @@
     return code === "PGRST205" || code === "42P01" || message.includes("does not exist") || message.includes("could not find the table");
   }
 
+  function isDuplicateKeyError(error) {
+    const code = String(error?.code || "").toUpperCase();
+    const message = String(error?.message || "").toLowerCase();
+    return code === "23505" || message.includes("duplicate key") || message.includes("already exists");
+  }
+
   function getStoredCustomStageTypes() {
     try {
       const raw = window.localStorage.getItem("crmPax.customStageTypes");
@@ -3810,23 +3816,39 @@
       if (error) return setMessage(els.authMessage, getAuthErrorMessage(error), true);
 
       const createdUser = data.user || data.session?.user || null;
-      state.currentUser = createdUser;
+      const hasSession = Boolean(data.session?.access_token);
+      state.currentUser = hasSession ? createdUser : null;
 
       if (createdUser) {
-        await ensureProfile();
+        if (hasSession) {
+          await ensureProfile();
+        }
 
         const requestPayload = {
-          auth_user_id: createdUser.id,
           full_name,
           email,
           status: ACCESS_STATUS.PENDING
         };
 
+        if (hasSession) {
+          requestPayload.auth_user_id = createdUser.id;
+        }
+
         const { error: requestError } = await state.supabase
           .from("access_requests")
-          .upsert(requestPayload, { onConflict: "email" });
+          .insert([requestPayload]);
 
         if (requestError && !isMissingRelationError(requestError)) {
+          if (isDuplicateKeyError(requestError)) {
+            state.currentUser = null;
+            resetAppState();
+            setMessage(els.authMessage, "Ja existe uma solicitacao para este e-mail. Aguarde a analise do administrador.");
+            document.querySelector('[data-tab="login"]').click();
+            $("loginEmail").value = email;
+            $("loginPassword").value = "";
+            $("registerForm").reset();
+            return;
+          }
           return setMessage(els.authMessage, `Nao foi possivel registrar a solicitacao: ${requestError.message}`, true);
         }
 
@@ -3838,7 +3860,9 @@
           // Optional function: the request remains recorded even when notification is unavailable.
         }
 
-        await state.supabase.auth.signOut();
+        if (hasSession) {
+          await state.supabase.auth.signOut();
+        }
       }
 
       state.currentUser = null;
