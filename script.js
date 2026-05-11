@@ -188,7 +188,8 @@
       social: null,
       planCount: null,
       planRevenue: null
-    }
+    },
+    pipelineScrollObserver: null
   };
 
   const PRESET_STAGE_TYPES = [
@@ -1646,15 +1647,19 @@
     const area = els.pipelineScrollArea;
     const top = els.pipelineScrollTop;
     const bottom = els.pipelineScrollBottom;
-    const width = area?.scrollWidth || 0;
-    const client = area?.clientWidth || 0;
+    const contentWidth = Math.max(
+      area?.scrollWidth || 0,
+      els.pipeline?.scrollWidth || 0
+    );
+    const viewportWidth = Math.floor(area?.getBoundingClientRect().width || area?.clientWidth || 0);
+    const hasHorizontalOverflow = (contentWidth - viewportWidth) > 4;
 
-    if (els.pipelineScrollTopInner) els.pipelineScrollTopInner.style.width = `${width}px`;
-    if (els.pipelineScrollBottomInner) els.pipelineScrollBottomInner.style.width = `${width}px`;
+    if (els.pipelineScrollTopInner) els.pipelineScrollTopInner.style.width = `${contentWidth}px`;
+    if (els.pipelineScrollBottomInner) els.pipelineScrollBottomInner.style.width = `${contentWidth}px`;
 
     [top, bottom].forEach((bar) => {
       if (!bar) return;
-      bar.classList.toggle("hidden", width <= client);
+      bar.classList.toggle("hidden", !hasHorizontalOverflow);
     });
 
     if (!area) return;
@@ -1675,6 +1680,15 @@
     top?.addEventListener("scroll", () => syncPipelineScrollBars(top));
     bottom?.addEventListener("scroll", () => syncPipelineScrollBars(bottom));
     window.addEventListener("resize", () => syncPipelineScrollBars());
+
+    if (typeof ResizeObserver === "function" && !state.pipelineScrollObserver) {
+      state.pipelineScrollObserver = new ResizeObserver(() => {
+        syncPipelineScrollBars();
+        requestAnimationFrame(updateStickyLayout);
+      });
+      state.pipelineScrollObserver.observe(area);
+      if (els.pipeline) state.pipelineScrollObserver.observe(els.pipeline);
+    }
   }
 
   function escapeHtml(value) {
