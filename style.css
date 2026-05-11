@@ -659,22 +659,19 @@ input:focus,select:focus,textarea:focus{
   width:var(--pipeline-scrollbar-fixed-width, 0px);
   z-index:70;
   box-sizing:border-box;
-  height:16px;
-  padding:0;
+  height:18px;
+  padding:2px;
   border:1px solid #1a3227;
   background:#13241b;
   border-radius:8px;
   box-shadow:0 10px 24px rgba(0,0,0,.28);
   pointer-events:auto;
-  overflow-y:hidden;
+  overflow:hidden;
 }
 
-.pipeline-scroll-area,
-.pipeline-scrollbar-native{
+.pipeline-scroll-area{
   overflow-x:auto;
   overflow-y:hidden;
-  scrollbar-width:thin;
-  scrollbar-color:#22c55e #13241b;
 }
 
 .pipeline-scroll-area{
@@ -690,17 +687,39 @@ input:focus,select:focus,textarea:focus{
 }
 
 .pipeline-scrollbar-native{
-  height:16px;
+  position:relative;
+  height:100%;
+  overflow:hidden;
   background:#13241b;
   border-radius:8px;
+  user-select:none;
 }
 
-.pipeline-scrollbar-native > div{
-  display:block;
+.pipeline-scrollbar-track{
+  position:relative;
+  width:100%;
   height:100%;
-  min-height:100%;
   background:#13241b;
-  border-radius:8px;
+  border-radius:6px;
+  touch-action:none;
+}
+
+.pipeline-scrollbar-thumb{
+  position:absolute;
+  top:0;
+  left:0;
+  height:100%;
+  min-width:48px;
+  background:linear-gradient(135deg,#1f9d55,#22c55e);
+  border-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);
+  transform:translateX(0);
+  cursor:grab;
+  touch-action:none;
+}
+
+.pipeline-scrollbar-thumb:active{
+  cursor:grabbing;
 }
 
 .saved-stage-types{
@@ -755,34 +774,6 @@ input:focus,select:focus,textarea:focus{
   color:#fecaca;
   border-left:1px solid rgba(255,255,255,.08);
 }
-
-.pipeline-scrollbar-native::-webkit-scrollbar{
-  height:14px;
-  background:#13241b;
-}
-
-.pipeline-scrollbar-native::-webkit-scrollbar-track{
-  background:#13241b;
-  border-radius:6px;
-}
-
-.pipeline-scrollbar-native::-webkit-scrollbar-track-piece{
-  background:#13241b;
-  border-radius:6px;
-}
-
-.pipeline-scrollbar-native::-webkit-scrollbar-button,
-.pipeline-scrollbar-native::-webkit-scrollbar-corner,
-.pipeline-scrollbar-native::-webkit-resizer{
-  background:#13241b;
-}
-
-.pipeline-scrollbar-native::-webkit-scrollbar-thumb{
-  background:#22c55e;
-  border-radius:6px;
-  border:2px solid #13241b;
-}
-
 
 .plan-toolbar{
   display:flex;
