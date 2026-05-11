@@ -657,7 +657,7 @@ input:focus,select:focus,textarea:focus{
   bottom:0;
   left:var(--pipeline-scrollbar-fixed-left, 0px);
   width:var(--pipeline-scrollbar-fixed-width, 0px);
-  z-index: 100;
+  z-index:80;
   box-sizing:border-box;
   align-items:stretch;
   height:0px;
