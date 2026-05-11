@@ -1695,7 +1695,7 @@
 
     if (!metrics.shouldShowTop || !metrics.trackWidth || !metrics.viewportWidth || metrics.contentWidth <= metrics.viewportWidth) {
       thumb.style.width = "0px";
-      thumb.style.transform = "translateX(0)";
+      thumb.style.transform = "translate(0, -50%)";
       return;
     }
 
@@ -1708,7 +1708,7 @@
       : 0;
 
     thumb.style.width = `${thumbWidth}px`;
-    thumb.style.transform = `translateX(${thumbOffset}px)`;
+    thumb.style.transform = `translate(${thumbOffset}px, -50%)`;
   }
 
   function syncPipelineScrollBars(source = null) {
