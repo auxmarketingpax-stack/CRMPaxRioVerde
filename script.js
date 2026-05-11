@@ -1834,7 +1834,7 @@
     els.userWelcome.textContent = getUserDisplayName();
     applyRoleBasedUi();
 
-    await loadAppData({ includeProfiles: state.profilesLoaded });
+    await loadAppData({ includeProfiles: true });
     bindView("funil");
   }
 
@@ -2367,8 +2367,9 @@
       state.currentUser?.id
     ]);
 
-    const people = state.profiles
-      .filter((p) => activeIds.has(p.id))
+    const people = (canManageAdminAreas()
+      ? state.profiles
+      : state.profiles.filter((p) => activeIds.has(p.id)))
       .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
 
     els.teamList.innerHTML = people.map((profile) => `
