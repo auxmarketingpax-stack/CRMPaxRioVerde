@@ -1712,11 +1712,16 @@
   }
 
   function syncPipelineScrollBars(source = null) {
-    const metrics = getPipelineScrollMetrics();
+    let metrics = getPipelineScrollMetrics();
     const area = metrics.area;
     const top = metrics.top;
 
-    if (top) top.style.display = metrics.shouldShowTop ? "block" : "none";
+    if (top) {
+      top.style.display = metrics.shouldShowTop ? "block" : "none";
+      if (metrics.shouldShowTop) {
+        metrics = getPipelineScrollMetrics();
+      }
+    }
     if (!area) return;
 
     if (typeof source === "number") {
