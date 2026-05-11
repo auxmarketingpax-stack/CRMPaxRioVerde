@@ -1095,6 +1095,9 @@
     const metricsHeight = els.metricsSection ? els.metricsSection.offsetHeight : 0;
     const pipelineScrollbarHeight = els.pipelineScrollTop ? els.pipelineScrollTop.offsetHeight : 0;
     const funilStickyHeight = els.funilStickyHead ? els.funilStickyHead.offsetHeight : (metricsHeight + pipelineScrollbarHeight);
+    const pipelineViewportRect = els.pipelineScrollArea?.getBoundingClientRect?.();
+    const pipelineViewportWidth = Math.max(0, Math.floor(pipelineViewportRect?.width || 0));
+    const pipelineViewportLeft = Math.max(0, Math.floor(pipelineViewportRect?.left || 0));
 
     root.style.setProperty("--mobile-topbar-height", `${mobileTopbarHeight}px`);
     root.style.setProperty("--topbar-height", `${topbarHeight}px`);
@@ -1103,6 +1106,8 @@
     root.style.setProperty("--pipeline-scrollbar-height", `${pipelineScrollbarHeight}px`);
     root.style.setProperty("--pipeline-scrollbar-sticky-offset", `${mobileTopbarHeight + topbarHeight + metricsHeight + 8}px`);
     root.style.setProperty("--funil-sticky-height", `${funilStickyHeight}px`);
+    root.style.setProperty("--pipeline-scrollbar-fixed-left", `${pipelineViewportLeft}px`);
+    root.style.setProperty("--pipeline-scrollbar-fixed-width", `${pipelineViewportWidth}px`);
   }
 
   function bindOverlayDismiss(overlay, closeFn) {
