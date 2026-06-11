@@ -499,7 +499,7 @@ input:focus,select:focus,textarea:focus{
 .mobile-filters-actions{
   margin-top:4px;
   display:flex;
-  justify-content:flex-end;
+  justify-content:stretch;
 }
 .mobile-filters-panel .form-group{
   margin-bottom:10px;
@@ -1116,7 +1116,10 @@ input:focus,select:focus,textarea:focus{
   }
   #appScreen > #mobileFiltersPanel{
     top:calc(var(--mobile-topbar-height) + 8px);
-    width:min(220px, calc(100vw - 24px));
+    left:12px;
+    right:12px;
+    width:min(320px, calc(100vw - 24px));
+    margin-inline:auto;
     padding:12px;
   }
   #appScreen > #mobileFiltersPanel .mobile-filters-grid{
@@ -1163,6 +1166,7 @@ input:focus,select:focus,textarea:focus{
     margin-top:0;
   }
   .mobile-filters-actions .btn{
+    display:block;
     width:100%;
   }
   .funil-sticky-head{
