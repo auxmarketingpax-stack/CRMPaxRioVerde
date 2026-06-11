@@ -16,6 +16,7 @@
     updatePasswordBtn: $("updatePasswordBtn"),
     logoutBtn: $("logoutBtn"),
     mobileMenuBtn: $("mobileMenuBtn"),
+    mobileAddLeadBtn: $("mobileAddLeadBtn"),
     mobileTopbar: document.querySelector(".mobile-topbar"),
     sidebar: $("sidebar"),
     main: document.querySelector(".main"),
@@ -4276,6 +4277,7 @@
     });
 
     els.addLeadBtn.addEventListener("click", () => openLeadModal());
+    els.mobileAddLeadBtn?.addEventListener("click", () => openLeadModal());
     els.addPlanBtn?.addEventListener("click", addPlanFromDraft);
     els.addObservationBtn?.addEventListener("click", addObservationFromDraft);
     els.addStageBtn?.addEventListener("click", openStageModal);

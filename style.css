@@ -212,6 +212,11 @@ input:focus,select:focus,textarea:focus{
   white-space:nowrap;
   font-size:15px
 }
+.mobile-topbar-action{
+  min-width:78px;
+  padding:10px 12px;
+  white-space:nowrap;
+}
 .mobile-filter-icon-btn{
   min-width:42px;
   width:42px;
@@ -1119,6 +1124,17 @@ input:focus,select:focus,textarea:focus{
   }
   .mobile-topbar{
     gap:0;
+  }
+  .mobile-topbar-main{
+    gap:8px;
+  }
+  .mobile-topbar-action{
+    min-width:72px;
+    padding:10px;
+    font-size:13px;
+  }
+  .mobile-brand-block{
+    min-width:0;
   }
   .card-actions,.table-actions,.stage-config-actions{
     gap:6px;
