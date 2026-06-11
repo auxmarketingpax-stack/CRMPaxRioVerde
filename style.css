@@ -86,6 +86,10 @@ button,input,select,textarea{font:inherit}
 }
 .auth-card h1,.auth-card h2{margin-bottom:10px}
 .auth-card p{color:var(--muted);margin-bottom:20px}
+.auth-card.recovery-mode .tabs,
+.auth-card.recovery-mode #loginForm,
+.auth-card.recovery-mode #registerForm,
+.auth-card.recovery-mode #registrationNotice{display:none!important}
 
 .tabs{display:flex;gap:8px;margin-bottom:16px}
 .tab-btn{
@@ -165,6 +169,7 @@ input:focus,select:focus,textarea:focus{
 }
 
 .reset-box{margin-top:14px}
+.auth-card.recovery-mode .reset-box{margin-top:20px}
 
 .mobile-topbar{
   display:none;

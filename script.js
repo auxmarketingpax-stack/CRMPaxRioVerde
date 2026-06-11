@@ -5,6 +5,7 @@
     bootScreen: $("bootScreen"),
     authScreen: $("authScreen"),
     appScreen: $("appScreen"),
+    authCard: document.querySelector(".auth-card"),
     authMessage: $("authMessage"),
     registerTabBtn: $("registerTabBtn"),
     registrationNotice: $("registrationNotice"),
@@ -316,12 +317,40 @@
     return error?.message || fallback;
   }
 
-  function getAuthRedirectUrl(hash = "") {
+  function getAuthRedirectUrl(suffix = "") {
     const protocol = String(window.location.protocol || "").toLowerCase();
     if (protocol !== "http:" && protocol !== "https:") return null;
 
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    return hash ? `${baseUrl}${hash}` : baseUrl;
+    return suffix ? `${baseUrl}${suffix}` : baseUrl;
+  }
+
+  function getUrlParams(value = "") {
+    return new URLSearchParams(String(value).replace(/^[#?]/, ""));
+  }
+
+  function isPasswordRecoveryFlow() {
+    const searchParams = getUrlParams(window.location.search);
+    const hashParams = getUrlParams(window.location.hash);
+    return searchParams.get("type") === "recovery" || hashParams.get("type") === "recovery";
+  }
+
+  function setPasswordRecoveryMode(enabled) {
+    els.authCard?.classList.toggle("recovery-mode", enabled);
+    els.resetPasswordBox?.classList.toggle("hidden", !enabled);
+  }
+
+  function showPasswordRecoveryScreen() {
+    setPasswordRecoveryMode(true);
+    document.querySelector('[data-tab="login"]')?.click();
+    showScreen("authScreen");
+    setMessage(els.authMessage, "Digite sua nova senha e salve.");
+    $("newPassword")?.focus();
+  }
+
+  function clearAuthRedirectState() {
+    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+    window.history.replaceState({}, document.title, cleanUrl);
   }
 
   function getUserRole() {
@@ -426,7 +455,7 @@
     state.historyLoaded = false;
     state.profilesLoaded = false;
     state.permissionRequestContext = null;
-    els.resetPasswordBox?.classList.add("hidden");
+    setPasswordRecoveryMode(false);
   }
 
   function closeAllModals() {
@@ -1913,12 +1942,8 @@
   }
 
   async function bootstrap() {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-
-    if (params.get("type") === "recovery") {
-      els.resetPasswordBox.classList.remove("hidden");
-      showScreen("authScreen");
-      setMessage(els.authMessage, "Digite sua nova senha e salve.");
+    if (isPasswordRecoveryFlow()) {
+      showPasswordRecoveryScreen();
       return;
     }
 
@@ -1940,9 +1965,7 @@
 
   async function handleAuthStateChange(event, session) {
     if (event === "PASSWORD_RECOVERY") {
-      els.resetPasswordBox.classList.remove("hidden");
-      showScreen("authScreen");
-      setMessage(els.authMessage, "Digite sua nova senha e salve.");
+      showPasswordRecoveryScreen();
       return;
     }
 
@@ -3889,7 +3912,7 @@
     const email = $("loginEmail").value.trim();
     if (!email) return setMessage(els.authMessage, "Digite seu e-mail para recuperar a senha.", true);
 
-    const redirectTo = getAuthRedirectUrl("#type=recovery");
+    const redirectTo = getAuthRedirectUrl("?type=recovery");
 
     if (!redirectTo) {
       return setMessage(
@@ -3912,9 +3935,10 @@
     const { error } = await state.supabase.auth.updateUser({ password: newPassword });
     if (error) return setMessage(els.authMessage, error.message, true);
 
-    els.resetPasswordBox.classList.add("hidden");
-    setMessage(els.authMessage, "Senha atualizada com sucesso. Faça login.");
-    window.location.hash = "";
+    $("newPassword").value = "";
+    clearAuthRedirectState();
+    setPasswordRecoveryMode(false);
+    setMessage(els.authMessage, "Senha atualizada com sucesso. Faca login.");
     await state.supabase.auth.signOut();
     showScreen("authScreen");
   }
