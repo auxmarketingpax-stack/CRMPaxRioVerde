@@ -1,0 +1,10 @@
+INSTRUCOES;Abra este arquivo no Excel para usar como modelo visual de importacao.
+INSTRUCOES;Para importar no CRM atual sem alterar o sistema, copie apenas a tabela a partir do cabecalho abaixo.
+INSTRUCOES;Nao altere os nomes das colunas do cabecalho.
+INSTRUCOES;Campos obrigatorios por linha: nome, contato, origem e pipeline.
+INSTRUCOES;Use a data no formato AAAA-MM-DD.
+INSTRUCOES;Use o nome do pipeline exatamente como esta cadastrado no CRM.
+INSTRUCOES;Colunas aceitas hoje: nome, contato, responsavel, valor, data_inicio, rede_social, origem, plano, pipeline, observacoes.
+
+nome;contato;responsavel;valor;data_inicio;rede_social;origem;plano;pipeline;observacoes
+Exemplo Cliente;64999999999;Maria;1500,00;2026-06-11;Instagram;Pago;Plano Ouro;Fechamento;Cliente pediu retorno
