@@ -362,13 +362,17 @@ function Get-ChannelFromText {
   $lookup = Normalize-LookupText $joined
 
   if (
-    $lookup -match "\bcdl\b" -or
+    $lookup -match "\bcdl\b"
+  ) {
+    return "CDL"
+  }
+
+  if (
     $lookup -match "prospecc" -or
     $lookup -match "prospec" -or
     $lookup -match "sudoexpo" -or
     $lookup -match "visita" -or
-    $lookup -match "campo" -or
-    $lookup -match "empresa" -or
+    $lookup -match "porta a porta" -or
     $lookup -match "cliente na rua" -or
     $lookup -match "field sales"
   ) {
