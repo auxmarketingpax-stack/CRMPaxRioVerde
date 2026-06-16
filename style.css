@@ -34,7 +34,7 @@
   --stat-padding:18px;
   --stat-label-size:14px;
   --stat-value-size:28px;
-  --pipeline-column-width:320px;
+  --pipeline-column-width:300px;
   --pipeline-gap:18px;
   --column-header-padding:16px;
   --column-body-padding:14px;
@@ -604,6 +604,7 @@ input:focus,select:focus,textarea:focus{
   font-size:var(--column-title-size);
   margin-bottom:5px;
   line-height:1.2;
+  overflow-wrap:anywhere;
 }
 .column-title span{font-size:12px;color:var(--muted)}
 .badge{
@@ -1377,9 +1378,7 @@ option {
 }
 
 .column-title-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  display:block;
   gap: 12px;
   width: 100%;
   min-height: 100%;
@@ -1413,7 +1412,9 @@ option {
 }
 
 .column-order-actions {
+  display:flex;
   justify-content: flex-start;
+  margin-top:10px;
 }
 
 .icon-btn {
