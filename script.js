@@ -447,6 +447,45 @@
     return parts.join(" | ") || fallback;
   }
 
+  function chunkArray(items, chunkSize) {
+    const size = Math.max(1, Number(chunkSize) || 1);
+    const source = Array.isArray(items) ? items : [];
+    const chunks = [];
+
+    for (let index = 0; index < source.length; index += size) {
+      chunks.push(source.slice(index, index + size));
+    }
+
+    return chunks;
+  }
+
+  async function fetchAllLeads() {
+    const pageSize = 1000;
+    const allRows = [];
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await state.supabase
+        .from("leads")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        return { data: [], error };
+      }
+
+      const rows = Array.isArray(data) ? data : [];
+      allRows.push(...rows);
+
+      if (rows.length < pageSize) {
+        return { data: allRows, error: null };
+      }
+
+      from += pageSize;
+    }
+  }
+
   function getRoleLabel(role = getUserRole()) {
     return role === USER_ROLE.ADMIN ? "Administrador" : "Usuario comum";
   }
@@ -2135,9 +2174,10 @@
   async function loadAppData(options = {}) {
     const includeProfiles = options.includeProfiles === true;
     const includeAdminData = canManageAdminAreas();
+    const leadsPromise = fetchAllLeads();
     const [stagesRes, leadsRes, profilesRes, stageTypesRes, leadSourcesRes, accessRequestsRes, adminRequestsRes] = await Promise.all([
       state.supabase.from("stages").select("*").order("position", { ascending: true }),
-      state.supabase.from("leads").select("*").order("created_at", { ascending: false }),
+      leadsPromise,
       includeProfiles
         ? state.supabase.from("profiles").select("*").order("full_name", { ascending: true })
         : Promise.resolve({ data: state.profiles, error: null }),
@@ -3258,14 +3298,20 @@
       return;
     }
 
-    const { data, error } = await state.supabase
-      .from("leads")
-      .insert(payload)
-      .select("id,name");
+    const importedRows = [];
 
-    if (error) {
-      alert(error.message);
-      return;
+    for (const batch of chunkArray(payload, 500)) {
+      const { data, error } = await state.supabase
+        .from("leads")
+        .insert(batch)
+        .select("id,name");
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      importedRows.push(...(Array.isArray(data) ? data : []));
     }
 
     await logChange(
@@ -3273,7 +3319,7 @@
       "lead",
       null,
       `${payload.length} lead(s) foram importados via CSV por ${getUserDisplayName()}.`,
-      { imported_count: payload.length, imported_ids: (data || []).map((item) => item.id) }
+      { imported_count: payload.length, imported_ids: importedRows.map((item) => item.id) }
     );
 
     alert(`${payload.length} lead(s) importado(s) com sucesso.`);
