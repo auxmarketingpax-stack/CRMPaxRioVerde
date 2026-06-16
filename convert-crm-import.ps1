@@ -1,6 +1,7 @@
 param(
   [string]$CrmWorkbookPath = "\\prv-cml01\pessoal\wendller.ferreira\Downloads\Controle de CRM 2026 (1).xlsx",
   [string]$MarketingWorkbookPath = "\\prv-cml01\pessoal\wendller.ferreira\Downloads\Controle de Contratos Gerados pelo Marketing 2026 (1).xlsx",
+  [string]$ReferralWorkbookPath = "\\prv-cml01\pessoal\wendller.ferreira\Downloads\PROGRAMA DE INDICAÇÕES COLABORADOR.xlsx",
   [string]$OutputDir = ""
 )
 
@@ -122,6 +123,7 @@ function Get-PipelineFromText {
     $lookup -match "nao tem interesse" -or
     $lookup -match "sem interesse" -or
     $lookup -match "cliente sem interesse" -or
+    $lookup -match "encerrado" -or
     $lookup -match "ja e cliente" -or
     $lookup -match "ja foi cliente" -or
     $lookup -match "nao pode reativa" -or
@@ -224,6 +226,8 @@ function New-ImportRow {
     [string]$DataInicio,
     [string]$RedeSocial,
     [string]$Origem,
+    [string]$IndicadoPor = "",
+    [string]$SetorIndicado = "",
     [string]$Plano,
     [string]$Pipeline,
     [string]$Observacoes,
@@ -241,6 +245,8 @@ function New-ImportRow {
     data_inicio  = Convert-DateToIso $DataInicio
     rede_social  = Normalize-Whitespace $RedeSocial
     origem       = Normalize-Whitespace $Origem
+    indicado_por = Normalize-Whitespace $IndicadoPor
+    setor_indicado = Normalize-Whitespace $SetorIndicado
     plano        = Normalize-Whitespace $Plano
     pipeline     = Normalize-Whitespace $Pipeline
     observacoes  = Normalize-Whitespace $Observacoes
@@ -313,6 +319,7 @@ $duplicateRows = New-Object System.Collections.Generic.List[object]
 $excel = $null
 $crmWorkbook = $null
 $marketingWorkbook = $null
+$referralWorkbook = $null
 
 try {
   $excel = New-Object -ComObject Excel.Application
@@ -543,10 +550,78 @@ try {
 
   $marketingWorkbook.Close($false)
   $marketingWorkbook = $null
+
+  $referralWorkbook = $excel.Workbooks.Open($ReferralWorkbookPath, 0, $true)
+  $referralSheet = $referralWorkbook.Worksheets.Item(1)
+  $referralRows = $referralSheet.UsedRange.Rows.Count
+
+  for ($row = 5; $row -le $referralRows; $row++) {
+    $nome = Get-CellText $referralSheet $row 1
+    $mesReferencia = Get-CellText $referralSheet $row 2
+    $diaIndica = Get-CellText $referralSheet $row 3
+    $contato = Get-CellText $referralSheet $row 4
+    $setor = Get-CellText $referralSheet $row 5
+    $colaborador = Get-CellText $referralSheet $row 6
+    $lider = Get-CellText $referralSheet $row 7
+    $vendedor = Get-CellText $referralSheet $row 8
+    $status = Get-CellText $referralSheet $row 9
+    $dataFechamento = Get-CellText $referralSheet $row 10
+    $motivoNaoFechamento = Get-CellText $referralSheet $row 11
+
+    if (-not (Has-MeaningfulText @($nome, $contato, $setor, $colaborador, $lider, $vendedor, $status, $motivoNaoFechamento))) {
+      continue
+    }
+
+    $cleanContact = Clean-Phone $contato
+    if (-not (Normalize-Whitespace $nome)) {
+      Add-SkippedRow $skippedRows "Indicacao sem nome do lead." (Split-Path $ReferralWorkbookPath -Leaf) "PROGRAMA DE INDICACAO" "Indicacoes colaborador" $row $nome $contato $status
+      continue
+    }
+    if (-not $cleanContact) {
+      Add-SkippedRow $skippedRows "Indicacao sem contato valido." (Split-Path $ReferralWorkbookPath -Leaf) "PROGRAMA DE INDICACAO" "Indicacoes colaborador" $row $nome $contato $status
+      continue
+    }
+
+    $obs = Build-Observation "$((Split-Path $ReferralWorkbookPath -Leaf)) > PROGRAMA DE INDICACAO" @{
+      "Mes referencia"          = $mesReferencia
+      "Dia indicacao"           = $diaIndica
+      "Lider"                   = $lider
+      "Status original"         = $status
+      "Data fechamento"         = $dataFechamento
+      "Motivo nao fechamento"   = $motivoNaoFechamento
+    }
+
+    $startDate = Convert-DateToIso $diaIndica
+    if (-not $startDate) {
+      $startDate = Convert-DateToIso $dataFechamento
+    }
+
+    $allRows.Add((New-ImportRow `
+      -Nome $nome `
+      -Contato $contato `
+      -Responsavel $vendedor `
+      -Valor "" `
+      -DataInicio $startDate `
+      -RedeSocial "Indicacao Colaborador" `
+      -Origem "Indicacao" `
+      -IndicadoPor $colaborador `
+      -SetorIndicado $setor `
+      -Plano "" `
+      -Pipeline (Get-PipelineFromText @($status, $motivoNaoFechamento)) `
+      -Observacoes $obs `
+      -SourceFile (Split-Path $ReferralWorkbookPath -Leaf) `
+      -SourceSheet "PROGRAMA DE INDICACAO" `
+      -SourceSection "Indicacoes colaborador" `
+      -SourceRow $row)) | Out-Null
+  }
+
+  $referralWorkbook.Close($false)
+  $referralWorkbook = $null
 }
 finally {
   if ($crmWorkbook -ne $null) { $crmWorkbook.Close($false) }
   if ($marketingWorkbook -ne $null) { $marketingWorkbook.Close($false) }
+  if ($referralWorkbook -ne $null) { $referralWorkbook.Close($false) }
   if ($excel -ne $null) {
     $excel.Quit()
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($excel)
@@ -563,6 +638,8 @@ $allCsvColumns = @(
   "data_inicio",
   "rede_social",
   "origem",
+  "indicado_por",
+  "setor_indicado",
   "plano",
   "pipeline",
   "observacoes"
@@ -576,6 +653,8 @@ $auditColumns = @(
   "data_inicio",
   "rede_social",
   "origem",
+  "indicado_por",
+  "setor_indicado",
   "plano",
   "pipeline",
   "observacoes",
@@ -605,7 +684,10 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
 
     $preferredOwner = @($items | ForEach-Object { Normalize-Whitespace $_.responsavel } | Where-Object { $_ }) | Select-Object -First 1
     $preferredSource = @($items | ForEach-Object { Normalize-Whitespace $_.rede_social } | Where-Object { $_ }) | Select-Object -First 1
+    $preferredReferrer = @($items | ForEach-Object { Normalize-Whitespace $_.indicado_por } | Where-Object { $_ }) | Select-Object -First 1
+    $preferredReferralSector = @($items | ForEach-Object { Normalize-Whitespace $_.setor_indicado } | Where-Object { $_ }) | Select-Object -First 1
     $preferredPlan = @($items | ForEach-Object { Normalize-Whitespace $_.plano } | Where-Object { $_ }) | Select-Object -First 1
+    $selectedOriginKey = Normalize-LookupText $selected.origem
 
     $selected = [pscustomobject]@{
       nome         = $selected.nome
@@ -615,6 +697,8 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
       data_inicio  = $selected.data_inicio
       rede_social  = if (Normalize-Whitespace $selected.rede_social) { $selected.rede_social } else { $preferredSource }
       origem       = $selected.origem
+      indicado_por = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.indicado_por) { $selected.indicado_por } else { $preferredReferrer } } else { "" }
+      setor_indicado = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.setor_indicado) { $selected.setor_indicado } else { $preferredReferralSector } } else { "" }
       plano        = if (Normalize-Whitespace $selected.plano) { $selected.plano } else { $preferredPlan }
       pipeline     = $selected.pipeline
       observacoes  = Normalize-Whitespace ($mergedNotes -join " || ")
@@ -680,7 +764,7 @@ $summary = @(
   "# Resumo da conversao",
   "",
   "- Data de geracao: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')",
-  "- Planilhas processadas: $(Split-Path $CrmWorkbookPath -Leaf) e $(Split-Path $MarketingWorkbookPath -Leaf)",
+  "- Planilhas processadas: $(Split-Path $CrmWorkbookPath -Leaf), $(Split-Path $MarketingWorkbookPath -Leaf) e $(Split-Path $ReferralWorkbookPath -Leaf)",
   "- Linhas convertidas: $($allRowsArray.Count)",
   "- Linhas recomendadas para importacao apos deduplicacao: $($deduplicatedRows.Count)",
   "- Duplicidades removidas no arquivo recomendado: $($duplicateRows.Count)",
@@ -698,7 +782,7 @@ $summary = @(
   "",
   "- Telefones foram normalizados para apenas numeros e DDD 64 foi aplicado quando o numero tinha 8 ou 9 digitos.",
   "- Datas foram convertidas para o formato AAAA-MM-DD.",
-  "- origem foi padronizada em Organico ou Pago para manter compatibilidade com o CRM atual.",
+  "- origem foi padronizada em Indicacao, Organico ou Pago para manter compatibilidade com o CRM atual.",
   "- pipeline foi inferido a partir do status original com os valores Novos Leads, Em Contato, Proposta, Fechado e Cancelado.",
   "- observacoes mantem a rastreabilidade da linha original e os detalhes da planilha."
 )

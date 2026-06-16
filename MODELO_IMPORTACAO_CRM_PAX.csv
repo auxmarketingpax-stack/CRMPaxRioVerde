@@ -4,7 +4,7 @@ INSTRUCOES;Nao altere os nomes das colunas do cabecalho.
 INSTRUCOES;Campos obrigatorios por linha: nome, contato, origem e pipeline.
 INSTRUCOES;Use a data no formato AAAA-MM-DD.
 INSTRUCOES;Use o nome do pipeline exatamente como esta cadastrado no CRM.
-INSTRUCOES;Colunas aceitas hoje: nome, contato, responsavel, valor, data_inicio, rede_social, origem, plano, pipeline, observacoes.
+INSTRUCOES;Colunas aceitas hoje: nome, contato, responsavel, valor, data_inicio, rede_social, origem, indicado_por, setor_indicado, plano, pipeline, observacoes.
 
-nome;contato;responsavel;valor;data_inicio;rede_social;origem;plano;pipeline;observacoes
-Exemplo Cliente;64999999999;Maria;1500,00;2026-06-11;Instagram;Pago;Plano Ouro;Fechamento;Cliente pediu retorno
+nome;contato;responsavel;valor;data_inicio;rede_social;origem;indicado_por;setor_indicado;plano;pipeline;observacoes
+Exemplo Cliente;64999999999;Maria;1500,00;2026-06-11;Instagram;Indicacao;Joao da Silva;Cobrança;Plano Ouro;Fechado;Cliente pediu retorno

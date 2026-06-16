@@ -219,7 +219,7 @@
     APPROVED: "approved",
     REJECTED: "rejected"
   };
-  const DEFAULT_LEAD_SOURCES = ["Organico", "Pago"];
+  const DEFAULT_LEAD_SOURCES = ["Indicacao", "Organico", "Pago"];
 
   function normalizeComparisonText(value) {
     return String(value || "")
