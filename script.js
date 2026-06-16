@@ -219,7 +219,7 @@
     APPROVED: "approved",
     REJECTED: "rejected"
   };
-  const DEFAULT_LEAD_SOURCES = ["Indicacao", "Organico", "Pago"];
+  const DEFAULT_LEAD_SOURCES = ["Indicação", "Evento Externo", "Organico", "Pago"];
 
   function normalizeComparisonText(value) {
     return String(value || "")
@@ -408,6 +408,43 @@
 
   function canManageLeadSources() {
     return isAdmin();
+  }
+
+  function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+  }
+
+  function normalizeIdList(values) {
+    const list = Array.isArray(values) ? values : [values];
+    const seen = new Set();
+
+    return list.reduce((acc, value) => {
+      const normalized = String(value || "").trim();
+      if (!normalized) return acc;
+
+      const key = normalized.toLowerCase();
+      if (seen.has(key)) return acc;
+      seen.add(key);
+      acc.push(normalized);
+      return acc;
+    }, []);
+  }
+
+  function formatSupabaseError(error, fallback = "Operacao nao concluida.") {
+    if (!error) return fallback;
+
+    const parts = [];
+    const message = String(error.message || "").trim();
+    const details = String(error.details || "").trim();
+    const hint = String(error.hint || "").trim();
+    const code = String(error.code || "").trim();
+
+    if (message) parts.push(message);
+    if (details && details !== message) parts.push(details);
+    if (hint) parts.push(`Dica: ${hint}`);
+    if (code) parts.push(`Codigo: ${code}`);
+
+    return parts.join(" | ") || fallback;
   }
 
   function getRoleLabel(role = getUserRole()) {
@@ -2514,6 +2551,25 @@
     els.selectAllLeads.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
   }
 
+  async function deleteLeadsByIds(leadIds) {
+    const ids = normalizeIdList(leadIds);
+    if (!ids.length) return { data: [], error: null };
+
+    const invalidIds = ids.filter((id) => !isUuid(id));
+    if (invalidIds.length) {
+      return {
+        data: [],
+        error: {
+          message: "Foram encontrados IDs de leads invalidos para exclusao.",
+          details: invalidIds.join(", ")
+        }
+      };
+    }
+
+    const { data, error } = await state.supabase.rpc("delete_leads_by_ids", { target_ids: ids });
+    return { data: Array.isArray(data) ? data : [], error };
+  }
+
   async function deleteSelectedLeads() {
     if (!canDeleteLeads()) {
       requestAdminAuthorization({
@@ -2530,18 +2586,15 @@
       return;
     }
 
-    const ids = [...state.selectedLeadIds];
+    const ids = normalizeIdList([...state.selectedLeadIds]);
     if (!ids.length) return;
 
     const selectedLeads = state.leads.filter((lead) => ids.includes(lead.id));
     if (!confirm(`Excluir ${ids.length} lead(s) selecionado(s)?`)) return;
 
-    const { error } = await state.supabase
-      .from("leads")
-      .delete()
-      .in("id", ids);
+    const { data, error } = await deleteLeadsByIds(ids);
 
-    if (error) return alert(`Erro no Supabase: ${error.message}`);
+    if (error) return alert(`Erro no Supabase: ${formatSupabaseError(error)}`);
 
     await logChange(
       "bulk_delete",
@@ -2549,7 +2602,7 @@
       null,
       `${ids.length} lead(s) foram excluídos por ${getUserDisplayName()}.`,
       {
-        deleted_ids: ids,
+        deleted_ids: data.map((item) => item?.deleted_id).filter(Boolean),
         deleted_names: selectedLeads.map((lead) => lead.name)
       }
     );
@@ -3132,6 +3185,7 @@
           ? (row.responsavel || row.vendedor || row.owner || getUserDisplayName())
           : getUserDisplayName();
         const startDate = row.data_inicio || row.start_date || row.data || "";
+        const normalizedStartDate = normalizeDateInput(startDate) || null;
         const trafficType = row.origem || row.traffic_type || getLeadSourceNames()[0] || "Organico";
         const referralName = String(row.indicado_por || row.quem_indicou || row.referral_name || "").trim();
         const referralSector = String(row.setor_indicado || row.setor_do_indicado || row.referral_sector || "").trim();
@@ -3158,7 +3212,7 @@
           contact: String(contact).trim(),
           owner: String(owner).trim(),
           value: importedValue,
-          start_date: normalizeDateInput(startDate) || startDate,
+          start_date: normalizedStartDate,
           social_source: String(row.rede_social || row.social_source || "").trim(),
           traffic_type: String(trafficType).trim(),
           notes: serializeLeadMeta({
@@ -3499,23 +3553,17 @@
 
     if (action === "approve") {
       if (request.request_type === "delete_lead" && request.payload?.lead_id) {
-        const { error: deleteError } = await state.supabase
-          .from("leads")
-          .delete()
-          .eq("id", request.payload.lead_id);
+        const { error: deleteError } = await deleteLeadsByIds([request.payload.lead_id]);
         if (deleteError) {
-          alert(`Erro ao excluir lead aprovado: ${deleteError.message}`);
+          alert(`Erro ao excluir lead aprovado: ${formatSupabaseError(deleteError)}`);
           return;
         }
       }
 
       if (request.request_type === "bulk_delete_leads" && Array.isArray(request.payload?.lead_ids) && request.payload.lead_ids.length) {
-        const { error: deleteError } = await state.supabase
-          .from("leads")
-          .delete()
-          .in("id", request.payload.lead_ids);
+        const { error: deleteError } = await deleteLeadsByIds(request.payload.lead_ids);
         if (deleteError) {
-          alert(`Erro ao excluir leads aprovados: ${deleteError.message}`);
+          alert(`Erro ao excluir leads aprovados: ${formatSupabaseError(deleteError)}`);
           return;
         }
       }
@@ -3864,7 +3912,8 @@
   }
 
   async function deleteLead(id) {
-    const lead = state.leads.find((x) => x.id === id);
+    const normalizedId = normalizeIdList([id])[0] || "";
+    const lead = state.leads.find((x) => x.id === normalizedId);
     if (!lead) return;
     if (!canDeleteLeads()) {
       requestAdminAuthorization({
@@ -3883,17 +3932,14 @@
     }
     if (!confirm(`Excluir o lead "${lead.name}"?`)) return;
 
-    const { error } = await state.supabase
-      .from("leads")
-      .delete()
-      .eq("id", id);
+    const { error } = await deleteLeadsByIds([normalizedId]);
 
-    if (error) return alert(`Erro no Supabase: ${error.message}`);
+    if (error) return alert(`Erro no Supabase: ${formatSupabaseError(error)}`);
 
     await logChange(
       "delete",
       "lead",
-      id,
+      normalizedId,
       `Lead "${lead.name}" foi excluído por ${getUserDisplayName()}.`,
       lead
     );

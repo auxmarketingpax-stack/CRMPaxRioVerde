@@ -103,6 +103,115 @@ function Convert-DateToIso {
   return ""
 }
 
+function Find-DateInText {
+  param([AllowNull()][string]$Value, [int]$DefaultYear = 0)
+
+  $text = Normalize-Whitespace $Value
+  if (-not $text) { return "" }
+
+  $matches = [regex]::Matches($text, '\b(\d{1,2})[\/\.-](\d{1,2})(?:[\/\.-](\d{2,4}))?\b')
+  foreach ($match in $matches) {
+    $day = [int]$match.Groups[1].Value
+    $month = [int]$match.Groups[2].Value
+    $yearText = $match.Groups[3].Value
+    $year = 0
+
+    if ($yearText) {
+      $year = [int]$yearText
+      if ($year -lt 100) {
+        $year += 2000
+      }
+    } elseif ($DefaultYear -gt 0) {
+      $year = $DefaultYear
+    } else {
+      continue
+    }
+
+    try {
+      return (Get-Date -Year $year -Month $month -Day $day -Hour 0 -Minute 0 -Second 0).ToString("yyyy-MM-dd")
+    }
+    catch {
+      continue
+    }
+  }
+
+  return ""
+}
+
+function Parse-MonthReference {
+  param([AllowNull()][string]$Value)
+
+  $text = Normalize-LookupText $Value
+  if (-not $text) {
+    return [pscustomobject]@{ Month = 0; Year = 0 }
+  }
+
+  $monthMap = @{
+    "jan" = 1; "janeiro" = 1
+    "fev" = 2; "fevereiro" = 2
+    "mar" = 3; "marco" = 3
+    "abr" = 4; "abril" = 4
+    "mai" = 5; "maio" = 5
+    "jun" = 6; "junho" = 6
+    "jul" = 7; "julho" = 7
+    "ago" = 8; "agosto" = 8
+    "set" = 9; "setembro" = 9
+    "out" = 10; "outubro" = 10
+    "nov" = 11; "novembro" = 11
+    "dez" = 12; "dezembro" = 12
+  }
+
+  $month = 0
+  foreach ($key in $monthMap.Keys) {
+    if ($text -match ("(^|\W)" + [regex]::Escape($key) + "(\W|$)")) {
+      $month = [int]$monthMap[$key]
+      break
+    }
+  }
+
+  if (-not $month) {
+    $numericMonth = [regex]::Match($text, '\b(0?[1-9]|1[0-2])\/(20\d{2})\b')
+    if ($numericMonth.Success) {
+      return [pscustomobject]@{
+        Month = [int]$numericMonth.Groups[1].Value
+        Year = [int]$numericMonth.Groups[2].Value
+      }
+    }
+  }
+
+  $yearMatch = [regex]::Match($text, '\b(20\d{2})\b')
+  $year = if ($yearMatch.Success) { [int]$yearMatch.Groups[1].Value } else { 0 }
+
+  return [pscustomobject]@{
+    Month = $month
+    Year = $year
+  }
+}
+
+function Get-FallbackStartDate {
+  param($Row)
+
+  if (Normalize-Whitespace $Row.data_inicio) {
+    return $Row.data_inicio
+  }
+
+  $sourceKey = Normalize-LookupText "$($Row.source_file) $($Row.source_sheet) $($Row.source_group)"
+  $noteDate = Find-DateInText $Row.observacoes 0
+  if ($noteDate) {
+    return $noteDate
+  }
+
+  if ($sourceKey -like "*crm (empresas)*") {
+    return "2024-01-01"
+  }
+
+  if ($sourceKey -like "*indicacoes colaborador*") {
+    return "2025-02-01"
+  }
+
+  return "2026-01-01"
+}
+
 function Resolve-WorkbookPath {
   param([string]$Path)
 
@@ -204,6 +313,69 @@ function Get-PipelineFromText {
   }
 
   return "Novos Leads"
+}
+
+function Get-LeadSourceFromText {
+  param(
+    [string]$DefaultSource,
+    [AllowNull()][string[]]$Texts
+  )
+
+  $joined = (($Texts | ForEach-Object { Normalize-Whitespace $_ }) -join " ").Trim()
+  $lookup = Normalize-LookupText $joined
+
+  if (
+    $lookup -match "indicac" -or
+    $lookup -match "quem indicou"
+  ) {
+    return "Indicação"
+  }
+
+  if (
+    $lookup -match "evento externo" -or
+    $lookup -match "acao externa" -or
+    $lookup -match "dia das maes" -or
+    $lookup -match "troca de figurinha" -or
+    $lookup -match "figurinhas" -or
+    $lookup -match "otovive"
+  ) {
+    return "Evento Externo"
+  }
+
+  if (
+    $lookup -match "trafego pago" -or
+    $lookup -match "\bpago\b"
+  ) {
+    return "Pago"
+  }
+
+  return $DefaultSource
+}
+
+function Get-ChannelFromText {
+  param(
+    [string]$DefaultChannel,
+    [AllowNull()][string[]]$Texts
+  )
+
+  $joined = (($Texts | ForEach-Object { Normalize-Whitespace $_ }) -join " ").Trim()
+  $lookup = Normalize-LookupText $joined
+
+  if (
+    $lookup -match "\bcdl\b" -or
+    $lookup -match "prospecc" -or
+    $lookup -match "prospec" -or
+    $lookup -match "sudoexpo" -or
+    $lookup -match "visita" -or
+    $lookup -match "campo" -or
+    $lookup -match "empresa" -or
+    $lookup -match "cliente na rua" -or
+    $lookup -match "field sales"
+  ) {
+    return "Field Sales"
+  }
+
+  return $DefaultChannel
 }
 
 function Quote-CsvValue {
@@ -428,8 +600,8 @@ try {
       -Responsavel "" `
       -Valor "" `
       -DataInicio $dataContato `
-      -RedeSocial $formaProspeccao `
-      -Origem "Organico" `
+      -RedeSocial (Get-ChannelFromText $formaProspeccao @($formaProspeccao, $status1, $status, $temInteresse)) `
+      -Origem (Get-LeadSourceFromText "Organico" @($formaProspeccao, $status1, $status, $temInteresse)) `
       -Plano "Plano Empresarial" `
       -Pipeline (Get-PipelineFromText @($status, $status1, $temInteresse)) `
       -Observacoes $obs `
@@ -474,11 +646,11 @@ try {
     $allRows.Add((New-ImportRow `
       -Nome $nome `
       -Contato $contato `
-      -Responsavel "" `
-      -Valor "" `
-      -DataInicio $data `
+          -Responsavel "" `
+          -Valor "" `
+          -DataInicio $data `
       -RedeSocial $tipoContato `
-      -Origem "Organico" `
+          -Origem (Get-LeadSourceFromText "Organico" @($tipoContato, $statusAtendimento, $status)) `
       -Plano $tipoPlano `
       -Pipeline (Get-PipelineFromText @($status, $statusAtendimento, $jaCliente)) `
       -Observacoes $obs `
@@ -519,7 +691,7 @@ try {
           -Valor "" `
           -DataInicio $orgData `
           -RedeSocial $orgRede `
-          -Origem "Organico" `
+          -Origem (Get-LeadSourceFromText "Organico" @($orgRede, $orgStatus)) `
           -Plano "" `
           -Pipeline (Get-PipelineFromText @($orgStatus)) `
           -Observacoes $obs `
@@ -555,7 +727,7 @@ try {
           -Valor "" `
           -DataInicio $paidData `
           -RedeSocial $paidRede `
-          -Origem "Pago" `
+          -Origem (Get-LeadSourceFromText "Pago" @($paidRede, $paidStatus)) `
           -Plano "" `
           -Pipeline (Get-PipelineFromText @($paidStatus)) `
           -Observacoes $obs `
@@ -592,7 +764,7 @@ try {
           -Valor "" `
           -DataInicio $otherData `
           -RedeSocial $otherOrigem `
-          -Origem "Organico" `
+          -Origem (Get-LeadSourceFromText "Organico" @($otherOrigem, $otherStatus)) `
           -Plano "" `
           -Pipeline (Get-PipelineFromText @($otherStatus, $otherOrigem)) `
           -Observacoes $obs `
@@ -612,6 +784,8 @@ try {
   $referralWorkbook = $excel.Workbooks.Open($ReferralWorkbookPath, 0, $true)
   $referralSheet = $referralWorkbook.Worksheets.Item(1)
   $referralRows = $referralSheet.UsedRange.Rows.Count
+  $referralTimelineYear = 0
+  $referralTimelineMonth = 0
 
   for ($row = 5; $row -le $referralRows; $row++) {
     $nome = Get-CellText $referralSheet $row 1
@@ -625,6 +799,21 @@ try {
     $status = Get-CellText $referralSheet $row 9
     $dataFechamento = Get-CellText $referralSheet $row 10
     $motivoNaoFechamento = Get-CellText $referralSheet $row 11
+    $monthInfo = Parse-MonthReference $mesReferencia
+
+    if ($monthInfo.Month -gt 0) {
+      if ($monthInfo.Year -gt 0) {
+        $referralTimelineYear = $monthInfo.Year
+      } elseif ($referralTimelineYear -eq 0) {
+        $referralTimelineYear = 2025
+      } elseif ($referralTimelineMonth -gt 0 -and $monthInfo.Month -lt $referralTimelineMonth) {
+        $referralTimelineYear++
+      }
+
+      if ($referralTimelineYear -gt 0) {
+        $referralTimelineMonth = $monthInfo.Month
+      }
+    }
 
     if (-not (Has-MeaningfulText @($nome, $contato, $setor, $colaborador, $lider, $vendedor, $status, $motivoNaoFechamento))) {
       continue
@@ -653,6 +842,15 @@ try {
     if (-not $startDate) {
       $startDate = Convert-DateToIso $dataFechamento
     }
+    if (-not $startDate) {
+      $startDate = Find-DateInText $motivoNaoFechamento $referralTimelineYear
+    }
+    if (-not $startDate) {
+      $startDate = Find-DateInText $status $referralTimelineYear
+    }
+    if (-not $startDate -and $referralTimelineYear -gt 0 -and $referralTimelineMonth -gt 0) {
+      $startDate = ("{0:D4}-{1:D2}-01" -f $referralTimelineYear, $referralTimelineMonth)
+    }
 
     $allRows.Add((New-ImportRow `
       -Nome $nome `
@@ -660,8 +858,8 @@ try {
       -Responsavel $vendedor `
       -Valor "" `
       -DataInicio $startDate `
-      -RedeSocial "Indicacao Colaborador" `
-      -Origem "Indicacao" `
+      -RedeSocial "Indicação Colaborador" `
+      -Origem "Indicação" `
       -IndicadoPor $colaborador `
       -SetorIndicado $setor `
       -Plano "" `
@@ -687,6 +885,12 @@ finally {
 }
 
 $allRowsArray = [object[]]$allRows.ToArray()
+$allRowsArray = @($allRowsArray | ForEach-Object {
+  if (-not (Normalize-Whitespace $_.data_inicio)) {
+    $_.data_inicio = Get-FallbackStartDate $_
+  }
+  $_
+})
 
 $allCsvColumns = @(
   "nome",
@@ -752,7 +956,7 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
       contato      = $selected.contato
       responsavel  = if (Normalize-Whitespace $selected.responsavel) { $selected.responsavel } else { $preferredOwner }
       valor        = $selected.valor
-      data_inicio  = $selected.data_inicio
+      data_inicio  = if (Normalize-Whitespace $selected.data_inicio) { $selected.data_inicio } else { Get-FallbackStartDate $selected }
       rede_social  = if (Normalize-Whitespace $selected.rede_social) { $selected.rede_social } else { $preferredSource }
       origem       = $selected.origem
       indicado_por = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.indicado_por) { $selected.indicado_por } else { $preferredReferrer } } else { "" }
@@ -840,7 +1044,7 @@ $summary = @(
   "",
   "- Telefones foram normalizados para apenas numeros e DDD 64 foi aplicado quando o numero tinha 8 ou 9 digitos.",
   "- Datas foram convertidas para o formato AAAA-MM-DD.",
-  "- origem foi padronizada em Indicacao, Organico ou Pago para manter compatibilidade com o CRM atual.",
+  "- origem foi padronizada em Indicação, Evento Externo, Organico ou Pago para manter compatibilidade com o CRM atual.",
   "- pipeline foi inferido a partir do status original com os valores Novos Leads, Em Contato, Proposta, Fechado e Cancelado.",
   "- observacoes mantem a rastreabilidade da linha original e os detalhes da planilha."
 )

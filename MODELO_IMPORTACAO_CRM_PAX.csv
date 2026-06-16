@@ -7,4 +7,4 @@ INSTRUCOES;Use o nome do pipeline exatamente como esta cadastrado no CRM.
 INSTRUCOES;Colunas aceitas hoje: nome, contato, responsavel, valor, data_inicio, rede_social, origem, indicado_por, setor_indicado, plano, pipeline, observacoes.
 
 nome;contato;responsavel;valor;data_inicio;rede_social;origem;indicado_por;setor_indicado;plano;pipeline;observacoes
-Exemplo Cliente;64999999999;Maria;1500,00;2026-06-11;Instagram;Indicacao;Joao da Silva;Cobrança;Plano Ouro;Fechado;Cliente pediu retorno
+Exemplo Cliente;64999999999;Maria;1500,00;2026-06-11;Instagram;Indicação;Joao da Silva;Cobrança;Plano Ouro;Fechado;Cliente pediu retorno
