@@ -103,6 +103,46 @@ function Convert-DateToIso {
   return ""
 }
 
+function Resolve-WorkbookPath {
+  param([string]$Path)
+
+  if (Test-Path -LiteralPath $Path) {
+    return (Get-Item -LiteralPath $Path).FullName
+  }
+
+  $parent = Split-Path -Path $Path -Parent
+  $leaf = Split-Path -Path $Path -Leaf
+  if (-not (Test-Path -LiteralPath $parent)) {
+    throw "Diretorio nao encontrado: $parent"
+  }
+
+  $targetKey = Normalize-LookupText $leaf
+  $officeFiles = Get-ChildItem -LiteralPath $parent -File |
+    Where-Object { @(".xlsx", ".xls", ".csv").Contains($_.Extension.ToLowerInvariant()) }
+
+  $candidate = $officeFiles |
+    Where-Object { Normalize-LookupText $_.Name -eq $targetKey } |
+    Select-Object -First 1
+
+  if (-not $candidate) {
+    $needle = ($targetKey -replace "\.(xlsx|xls|csv)$", "")
+    $tokens = @($needle -split "\s+" | Where-Object { $_ -and $_.Length -ge 4 })
+    $candidate = $officeFiles |
+      Where-Object {
+        $nameKey = Normalize-LookupText $_.Name
+        $nameKey -like ("*" + $needle + "*") -or
+        (($tokens | Where-Object { $nameKey -like ("*" + $_ + "*") }).Count -ge [Math]::Min(2, [Math]::Max(1, $tokens.Count)))
+      } |
+      Select-Object -First 1
+  }
+
+  if (-not $candidate) {
+    throw "Arquivo nao encontrado: $Path"
+  }
+
+  return $candidate.FullName
+}
+
 function Get-PipelineFromText {
   param([AllowNull()][string[]]$Texts)
 
@@ -310,6 +350,24 @@ function Get-PipelineRank {
     "Cancelado" { return 1 }
     default { return 0 }
   }
+}
+
+$CrmWorkbookPath = Resolve-WorkbookPath $CrmWorkbookPath
+$MarketingWorkbookPath = Resolve-WorkbookPath $MarketingWorkbookPath
+$referralParent = Split-Path -Path $ReferralWorkbookPath -Parent
+$ReferralWorkbookPath = (
+  Get-ChildItem -LiteralPath $referralParent -File -Filter "*.xlsx" |
+    Where-Object {
+      $nameKey = Normalize-LookupText $_.Name
+      $nameKey -like "*programa*" -and
+      $nameKey -like "*indic*" -and
+      $nameKey -like "*colaborador*"
+    } |
+    Select-Object -First 1 -ExpandProperty FullName
+)
+
+if (-not $ReferralWorkbookPath) {
+  throw "Arquivo da planilha de indicacoes nao encontrado em $referralParent"
 }
 
 $allRows = New-Object System.Collections.Generic.List[object]
