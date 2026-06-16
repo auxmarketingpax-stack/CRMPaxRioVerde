@@ -34,7 +34,7 @@
   --stat-padding:18px;
   --stat-label-size:14px;
   --stat-value-size:28px;
-  --pipeline-column-width:360px;
+  --pipeline-column-width:320px;
   --pipeline-gap:18px;
   --column-header-padding:16px;
   --column-body-padding:14px;
@@ -1377,9 +1377,9 @@ option {
 }
 
 .column-title-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   width: 100%;
   min-height: 100%;
@@ -1410,6 +1410,10 @@ option {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.column-order-actions {
+  justify-content: flex-start;
 }
 
 .icon-btn {
@@ -1495,7 +1499,7 @@ input[type="color"]::-moz-color-swatch {
   }
 
   .column-title-wrap {
-    grid-template-columns: 1fr;
+    gap: 10px;
   }
 }
 
