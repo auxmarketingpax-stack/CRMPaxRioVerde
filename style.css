@@ -430,6 +430,12 @@ input:focus,select:focus,textarea:focus{
   background:rgba(239,68,68,.24);
 }
 
+.btn:disabled,
+.btn-danger:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
 .select-col{
   width:48px;
   text-align:center!important;

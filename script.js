@@ -184,6 +184,9 @@
     },
     chartLoader: null,
     selectedLeadIds: new Set(),
+    bulkDeleteInProgress: false,
+    bulkDeleteTotal: 0,
+    bulkDeleteCompleted: 0,
     modalPlans: [],
     modalObservations: [],
     charts: {
@@ -457,6 +460,10 @@
     }
 
     return chunks;
+  }
+
+  function waitForNextPaint() {
+    return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
   }
 
   async function fetchAllLeads() {
@@ -2571,7 +2578,17 @@
     if (!els.deleteSelectedBtn) return;
 
     const count = state.selectedLeadIds.size;
+    if (state.bulkDeleteInProgress) {
+      const total = state.bulkDeleteTotal || count;
+      const completed = Math.min(state.bulkDeleteCompleted || 0, total);
+      els.deleteSelectedBtn.textContent = `Excluindo ${completed}/${total}...`;
+      els.deleteSelectedBtn.disabled = true;
+      els.deleteSelectedBtn.classList.remove("hidden");
+      return;
+    }
+
     els.deleteSelectedBtn.textContent = count ? `Excluir selecionados (${count})` : "Excluir selecionados";
+    els.deleteSelectedBtn.disabled = false;
     els.deleteSelectedBtn.classList.toggle("hidden", count === 0);
   }
 
@@ -2591,9 +2608,10 @@
     els.selectAllLeads.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
   }
 
-  async function deleteLeadsByIds(leadIds) {
+  async function deleteLeadsByIds(leadIds, options = {}) {
     const ids = normalizeIdList(leadIds);
     if (!ids.length) return { data: [], error: null };
+    const onProgress = typeof options.onProgress === "function" ? options.onProgress : null;
 
     const invalidIds = ids.filter((id) => !isUuid(id));
     if (invalidIds.length) {
@@ -2608,6 +2626,7 @@
 
     const { data, error } = await state.supabase.rpc("delete_leads_by_ids", { target_ids: ids });
     if (!error) {
+      onProgress?.(ids.length, ids.length);
       return { data: Array.isArray(data) ? data : [], error: null };
     }
 
@@ -2616,18 +2635,21 @@
     }
 
     const deletedIds = [];
+    const batches = chunkArray(ids, 100);
 
-    for (const id of ids) {
+    for (const batch of batches) {
       const { error: deleteError } = await state.supabase
         .from("leads")
         .delete()
-        .eq("id", id);
+        .in("id", batch);
 
       if (deleteError) {
         return { data: deletedIds.map((deletedId) => ({ deleted_id: deletedId })), error: deleteError };
       }
 
-      deletedIds.push(id);
+      deletedIds.push(...batch);
+      onProgress?.(deletedIds.length, ids.length);
+      await waitForNextPaint();
     }
 
     return {
@@ -2637,6 +2659,8 @@
   }
 
   async function deleteSelectedLeads() {
+    if (state.bulkDeleteInProgress) return;
+
     if (!canDeleteLeads()) {
       requestAdminAuthorization({
         requestType: "bulk_delete_leads",
@@ -2658,7 +2682,28 @@
     const selectedLeads = state.leads.filter((lead) => ids.includes(lead.id));
     if (!confirm(`Excluir ${ids.length} lead(s) selecionado(s)?`)) return;
 
-    const { data, error } = await deleteLeadsByIds(ids);
+    state.bulkDeleteInProgress = true;
+    state.bulkDeleteTotal = ids.length;
+    state.bulkDeleteCompleted = 0;
+    updateBulkDeleteButton();
+    await waitForNextPaint();
+
+    let data = [];
+    let error = null;
+
+    try {
+      ({ data, error } = await deleteLeadsByIds(ids, {
+        onProgress(completed) {
+          state.bulkDeleteCompleted = completed;
+          updateBulkDeleteButton();
+        }
+      }));
+    } finally {
+      state.bulkDeleteInProgress = false;
+      state.bulkDeleteTotal = 0;
+      state.bulkDeleteCompleted = 0;
+      updateBulkDeleteButton();
+    }
 
     if (error) return alert(`Erro no Supabase: ${formatSupabaseError(error)}`);
 
