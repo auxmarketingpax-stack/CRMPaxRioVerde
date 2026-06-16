@@ -368,9 +368,14 @@ function Get-ChannelFromText {
   }
 
   if (
+    $lookup -match "sudoexpo"
+  ) {
+    return "SUDOEXPO"
+  }
+
+  if (
     $lookup -match "prospecc" -or
     $lookup -match "prospec" -or
-    $lookup -match "sudoexpo" -or
     $lookup -match "visita" -or
     $lookup -match "porta a porta" -or
     $lookup -match "cliente na rua" -or

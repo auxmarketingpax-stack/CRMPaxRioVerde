@@ -2567,7 +2567,33 @@
     }
 
     const { data, error } = await state.supabase.rpc("delete_leads_by_ids", { target_ids: ids });
-    return { data: Array.isArray(data) ? data : [], error };
+    if (!error) {
+      return { data: Array.isArray(data) ? data : [], error: null };
+    }
+
+    if (String(error.code || "").trim() !== "PGRST202") {
+      return { data: [], error };
+    }
+
+    const deletedIds = [];
+
+    for (const id of ids) {
+      const { error: deleteError } = await state.supabase
+        .from("leads")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        return { data: deletedIds.map((deletedId) => ({ deleted_id: deletedId })), error: deleteError };
+      }
+
+      deletedIds.push(id);
+    }
+
+    return {
+      data: deletedIds.map((deletedId) => ({ deleted_id: deletedId })),
+      error: null
+    };
   }
 
   async function deleteSelectedLeads() {
