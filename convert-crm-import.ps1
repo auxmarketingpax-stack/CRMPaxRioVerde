@@ -258,61 +258,153 @@ function Get-PipelineFromText {
   $joined = (($Texts | ForEach-Object { Normalize-Whitespace $_ }) -join " ").Trim()
   $lookup = Normalize-LookupText $joined
 
-  if (-not $lookup) { return "Novos Leads" }
+  if (-not $lookup) { return "Follow-Up" }
 
   if (
     $lookup -match "\bfechado\b" -or
     $lookup -match "\bfechou\b" -or
-    $lookup -match "contratos empresariais"
+    $lookup -match "contratos empresariais" -or
+    $lookup -match "\bfeito\b" -or
+    $lookup -match "fez o contrato" -or
+    $lookup -match "cliente diz que fez" -or
+    $lookup -match "fez pela empresa" -or
+    $lookup -match "realizou o plano" -or
+    $lookup -match "ja fez o plano"
   ) {
     return "Fechado"
   }
 
   if (
-    $lookup -match "nao tem interesse" -or
-    $lookup -match "sem interesse" -or
-    $lookup -match "cliente sem interesse" -or
-    $lookup -match "encerrado" -or
-    $lookup -match "ja e cliente" -or
-    $lookup -match "ja foi cliente" -or
     $lookup -match "nao pode reativa" -or
+    $lookup -match "nao pode reativar" -or
+    $lookup -match "nao consegue reativar" -or
+    $lookup -match "nao seria possivel reativar"
+  ) {
+    return "Cliente não pode reativar o plano"
+  }
+
+  if (
+    $lookup -match "ja e cliente" -or
+    $lookup -match "ja e associado" -or
+    $lookup -match "cliente da pax social" -or
+    $lookup -match "ja esta associado" -or
+    $lookup -match "ja tem plano" -or
+    $lookup -match "ja possui plano"
+  ) {
+    return "Já é associado"
+  }
+
+  if (
+    $lookup -match "nao tem interesse" -or
+    $lookup -match "nao tem interresse" -or
+    $lookup -match "sem interesse" -or
+    $lookup -match "sem interresse" -or
+    $lookup -match "cliente sem interesse" -or
+    $lookup -match "nao quer" -or
+    $lookup -match "nao quer saber do plano" -or
+    $lookup -match "perdido" -or
+    $lookup -match "encerrado" -or
+    $lookup -match "ja foi cliente" -or
+    $lookup -match "mudou para outra cidade" -or
+    $lookup -match "mudou para santa helena" -or
     $lookup -match "nao mora rv" -or
     $lookup -match "nao mora rio verde" -or
     $lookup -match "diretoria barrou" -or
-    $lookup -match "barrou a proposta"
+    $lookup -match "barrou a proposta" -or
+    $lookup -match "nao sendo possivel fazer o plano" -or
+    $lookup -match "nao e possivel fazer o plano" -or
+    $lookup -match "nao foi possivel fazer o plano"
   ) {
-    return "Cancelado"
+    return "Não tem interesse"
+  }
+
+  if (
+    $lookup -match "nao responde" -or
+    $lookup -match "nao reponde" -or
+    $lookup -match "nao atende" -or
+    $lookup -match "sem resposta" -or
+    $lookup -match "nao visualiza" -or
+    $lookup -match "nao responde as mensagens" -or
+    $lookup -match "numero errado" -or
+    $lookup -match "n errado" -or
+    $lookup -match "telefone inexistente" -or
+    $lookup -match "numero de telefone ixesistente" -or
+    $lookup -match "numero nao chama" -or
+    $lookup -match "nao possui whatsapp" -or
+    $lookup -match "nao tem whatsapp" -or
+    $lookup -match "nao tem zap" -or
+    $lookup -match "nao possui zap" -or
+    $lookup -match "ultimo contato" -or
+    $lookup -match "ultima tentativa" -or
+    $lookup -match "feito varias tentativas" -or
+    $lookup -match "varias tentativas" -or
+    $lookup -match "caixa postal" -or
+    $lookup -match "mensagens temporarias"
+  ) {
+    return "Não responde"
   }
 
   if (
     $lookup -match "proposta" -or
     $lookup -match "apresentad" -or
     $lookup -match "apresentar" -or
-    $lookup -match "aguardando" -or
+    $lookup -match "reuniao" -or
+    $lookup -match "marcar um dia" -or
+    $lookup -match "marcar um horario" -or
+    $lookup -match "marcar horario" -or
+    $lookup -match "agend" -or
+    $lookup -match "vir ao escritorio" -or
+    $lookup -match "quer fazer" -or
+    $lookup -match "quer fechar" -or
     $lookup -match "vai fechar" -or
     $lookup -match "vai analisar" -or
-    $lookup -match "interesse" -or
+    $lookup -match "indeciso" -or
     $lookup -match "interessado" -or
-    $lookup -match "agend"
+    $lookup -match "interesse" -or
+    $lookup -match "interresse" -or
+    $lookup -match "ficou de acertar" -or
+    $lookup -match "ficou de ver" -or
+    $lookup -match "ficou de falar" -or
+    $lookup -match "avaliando a possibilidade" -or
+    $lookup -match "priorizar outros assuntos"
   ) {
-    return "Proposta"
+    return "Apresentação/Negociação"
   }
 
   if (
     $lookup -match "em andamento" -or
+    $lookup -match "cliente esta com o vendedor" -or
+    $lookup -match "cliente esta com vendedor" -or
     $lookup -match "liguei" -or
     $lookup -match "\bligar\b" -or
     $lookup -match "\bmsg\b" -or
     $lookup -match "mensagem" -or
-    $lookup -match "nao responde" -or
-    $lookup -match "nao atende" -or
     $lookup -match "retorno" -or
-    $lookup -match "retornar"
+    $lookup -match "retornar" -or
+    $lookup -match "aguardando resposta" -or
+    $lookup -match "aguardando retorno" -or
+    $lookup -match "aguardando" -or
+    $lookup -match "vai falar com" -or
+    $lookup -match "enviar e-mail" -or
+    $lookup -match "enviado e-mail" -or
+    $lookup -match "material explicativo" -or
+    $lookup -match "vamos entrar em contato" -or
+    $lookup -match "vamos ligar" -or
+    $lookup -match "ligar na semana" -or
+    $lookup -match "ligar segunda" -or
+    $lookup -match "passou o contato" -or
+    $lookup -match "entrar em contato"
   ) {
-    return "Em Contato"
+    return "Follow-Up"
   }
 
-  return "Novos Leads"
+  if (
+    $lookup -match "caixa postal"
+  ) {
+    return "Não responde"
+  }
+
+  return "Follow-Up"
 }
 
 function Get-LeadSourceFromText {
@@ -971,7 +1063,7 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
       indicado_por = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.indicado_por) { $selected.indicado_por } else { $preferredReferrer } } else { "" }
       setor_indicado = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.setor_indicado) { $selected.setor_indicado } else { $preferredReferralSector } } else { "" }
       plano        = if (Normalize-Whitespace $selected.plano) { $selected.plano } else { $preferredPlan }
-      pipeline     = $selected.pipeline
+      pipeline     = Get-PipelineFromText @($selected.pipeline, ($mergedNotes -join " || "))
       observacoes  = Normalize-Whitespace ($mergedNotes -join " || ")
       source_file  = $selected.source_file
       source_sheet = $selected.source_sheet
