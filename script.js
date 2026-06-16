@@ -110,6 +110,10 @@
     stage: $("stage"),
     socialSource: $("socialSource"),
     trafficType: $("trafficType"),
+    referralNameGroup: $("referralNameGroup"),
+    referralName: $("referralName"),
+    referralSectorGroup: $("referralSectorGroup"),
+    referralSector: $("referralSector"),
     addPlanBtn: $("addPlanBtn"),
     plansList: $("plansList"),
     planSuggestions: $("planSuggestions"),
@@ -216,6 +220,18 @@
     REJECTED: "rejected"
   };
   const DEFAULT_LEAD_SOURCES = ["Organico", "Pago"];
+
+  function normalizeComparisonText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+  }
+
+  function isReferralLeadSource(value) {
+    return normalizeComparisonText(value) === "indicacao";
+  }
 
   const STORAGE_CACHE_KEYS = [
     "crmPax.customStageTypes",
@@ -798,7 +814,9 @@
         plan: "",
         plans: [],
         legacyText: text,
-        observations: text ? [{ date: "", text }] : []
+        observations: text ? [{ date: "", text }] : [],
+        referral_name: "",
+        referral_sector: ""
       };
     }
 
@@ -808,6 +826,8 @@
       const observations = cleanObservationList(parsed?.observations || []);
       const plans = cleanPlanList(parsed?.plans || []);
       const legacyPlan = String(parsed?.plan || "").trim();
+      const referralName = String(parsed?.referral_name || "").trim();
+      const referralSector = String(parsed?.referral_sector || "").trim();
       if (!plans.length && legacyPlan) {
         plans.push({ name: legacyPlan, value: Number.isFinite(Number(leadValue)) ? Number(leadValue) : 0 });
       } else if (!plans.length && Number(leadValue || 0) > 0) {
@@ -818,7 +838,9 @@
         plan: legacyPlan || (plans[0]?.name || ""),
         plans,
         legacyText,
-        observations
+        observations,
+        referral_name: referralName,
+        referral_sector: referralSector
       };
     } catch (_error) {
       const text = raw.trim();
@@ -826,7 +848,9 @@
         plan: "",
         plans: [],
         legacyText: text,
-        observations: text ? [{ date: "", text }] : []
+        observations: text ? [{ date: "", text }] : [],
+        referral_name: "",
+        referral_sector: ""
       };
     }
   }
@@ -836,10 +860,12 @@
     const plans = cleanPlanList(meta.plans || []);
     const observations = cleanObservationList(meta.observations || []);
     const plan = plans[0]?.name || String(meta.plan || "").trim();
+    const referralName = String(meta.referral_name || "").trim();
+    const referralSector = String(meta.referral_sector || "").trim();
 
-    if (!plan && !plans.length && !observations.length) return legacyText;
+    if (!plan && !plans.length && !observations.length && !referralName && !referralSector) return legacyText;
 
-    return `__CRM_META__${JSON.stringify({ plan, plans, legacyText, observations })}`;
+    return `__CRM_META__${JSON.stringify({ plan, plans, legacyText, observations, referral_name: referralName, referral_sector: referralSector })}`;
   }
 
   function normalizeLead(lead) {
@@ -935,6 +961,14 @@
     return cleanObservationList(lead?._meta?.observations || []);
   }
 
+  function getLeadReferralName(lead) {
+    return String(lead?._meta?.referral_name || "").trim();
+  }
+
+  function getLeadReferralSector(lead) {
+    return String(lead?._meta?.referral_sector || "").trim();
+  }
+
   function getLeadLatestObservation(lead) {
     const observations = getLeadObservations(lead);
     return observations[observations.length - 1] || null;
@@ -947,11 +981,24 @@
       lead?.owner,
       lead?.traffic_type,
       lead?.social_source,
+      getLeadReferralName(lead),
+      getLeadReferralSector(lead),
       lead?._meta?.legacyText,
       getLeadPlan(lead),
       ...getLeadPlans(lead).map((item) => `${item.name} ${item.value}`),
       ...getLeadObservations(lead).map((item) => item.text)
     ].join(" ").toLowerCase();
+  }
+
+  function toggleReferralNameField({ clearWhenHidden = false } = {}) {
+    const shouldShow = isReferralLeadSource(els.trafficType?.value);
+    els.referralNameGroup?.classList.toggle("hidden", !shouldShow);
+    els.referralSectorGroup?.classList.toggle("hidden", !shouldShow);
+
+    if (!shouldShow && clearWhenHidden && els.referralName) {
+      els.referralName.value = "";
+      if (els.referralSector) els.referralSector.value = "";
+    }
   }
 
   function getLeadMonthKey(lead) {
@@ -2396,6 +2443,8 @@
               <span><strong>Responsável:</strong> ${escapeHtml(lead.owner || "-")}</span>
               <span><strong>Início:</strong> ${formatDate(lead.start_date)}</span>
               <span><strong>Origem:</strong> ${escapeHtml(lead.traffic_type || "-")}</span>
+              ${getLeadReferralName(lead) ? `<span><strong>Indicou:</strong> ${escapeHtml(getLeadReferralName(lead))}</span>` : ""}
+              ${getLeadReferralSector(lead) ? `<span><strong>Setor do indicado:</strong> ${escapeHtml(getLeadReferralSector(lead))}</span>` : ""}
               <span><strong>Canal de origem:</strong> ${escapeHtml(lead.social_source || "-")}</span>
             </div>
 
@@ -2539,7 +2588,7 @@
         <td>${escapeHtml(lead.owner || "-")}</td>
         <td>${escapeHtml(getLeadPlanValueText(lead))}</td>
         <td>${formatDate(lead.start_date)}</td>
-        <td>${escapeHtml(lead.traffic_type || "-")}</td>
+        <td>${escapeHtml(lead.traffic_type || "-")}${getLeadReferralName(lead) ? `<br><small>Indicou: ${escapeHtml(getLeadReferralName(lead))}</small>` : ""}${getLeadReferralSector(lead) ? `<br><small>Setor: ${escapeHtml(getLeadReferralSector(lead))}</small>` : ""}</td>
         <td>${escapeHtml(lead.social_source || "-")}</td>
         <td>${escapeHtml(getLeadPlanDisplayText(lead))}</td>
         <td>${escapeHtml(getStageName(lead.stage_id))}</td>
@@ -3037,6 +3086,8 @@
       "data_inicio",
       "rede_social",
       "origem",
+      "indicado_por",
+      "setor_indicado",
       "plano",
       "pipeline",
       "observacoes"
@@ -3052,6 +3103,8 @@
         csvEscape(lead.start_date || ""),
         csvEscape(lead.social_source || ""),
         csvEscape(lead.traffic_type || ""),
+        csvEscape(getLeadReferralName(lead) || ""),
+        csvEscape(getLeadReferralSector(lead) || ""),
         csvEscape(getLeadPlan(lead) || ""),
         csvEscape(getStageName(lead.stage_id)),
         csvEscape(lead._meta?.legacyText || "")
@@ -3080,6 +3133,8 @@
           : getUserDisplayName();
         const startDate = row.data_inicio || row.start_date || row.data || "";
         const trafficType = row.origem || row.traffic_type || getLeadSourceNames()[0] || "Organico";
+        const referralName = String(row.indicado_por || row.quem_indicou || row.referral_name || "").trim();
+        const referralSector = String(row.setor_indicado || row.setor_do_indicado || row.referral_sector || "").trim();
         const legacyText = String(row.observacoes || row.notes || "").trim();
         const importedValue = parseMoney(row.quantidade || row.valor || row.value || 0);
         const importedContractNumber = String(row.contrato || row.numero_contrato || row.contract_number || "").trim();
@@ -3110,7 +3165,9 @@
             plan: planName,
             plans,
             legacyText,
-            observations: legacyText ? [{ date: "", text: legacyText }] : []
+            observations: legacyText ? [{ date: "", text: legacyText }] : [],
+            referral_name: isReferralLeadSource(trafficType) ? referralName : "",
+            referral_sector: isReferralLeadSource(trafficType) ? referralSector : ""
           })
         };
       })
@@ -3187,6 +3244,9 @@
     }
     els.socialSource.value = lead?.social_source || "";
     els.trafficType.value = lead?.traffic_type || getLeadSourceNames()[0] || "";
+    els.referralName.value = getLeadReferralName(lead);
+    els.referralSector.value = getLeadReferralSector(lead);
+    toggleReferralNameField();
     state.modalPlans = getLeadPlans(lead).map((item) => ({ ...item }));
     if (lead && !state.modalPlans.length && Number(lead?.value || 0) > 0) {
       state.modalPlans = [{ name: getDefaultPlanName(0), value: Number(lead.value || 0) }];
@@ -3620,6 +3680,8 @@
 
     const invalidPlan = normalizedModalPlans.find((item) => item.name && !isNoPlanName(item.name) && String(item?.value ?? "").trim() === "");
     if (existingLead && invalidPlan) return alert("Ao adicionar um plano, informe tambem o valor.");
+    const referralName = isReferralLeadSource(els.trafficType.value) ? els.referralName.value.trim() : "";
+    const referralSector = isReferralLeadSource(els.trafficType.value) ? els.referralSector.value.trim() : "";
 
     const payload = {
       assigned_to: state.currentUser.id,
@@ -3637,13 +3699,18 @@
         plans: draftPlans,
         plan: draftPlans[0]?.name || "",
         legacyText: existingMeta.legacyText,
-        observations: draftObservations
+        observations: draftObservations,
+        referral_name: referralName,
+        referral_sector: referralSector
       })
     };
 
     if (!payload.stage_id) return alert("Selecione uma etapa.");
     if (!payload.name || !payload.contact || !payload.owner || !payload.start_date || !payload.traffic_type) {
       return alert("Preencha os campos obrigatorios.");
+    }
+    if (isReferralLeadSource(payload.traffic_type) && !referralName) {
+      return alert("Informe o nome de quem indicou.");
     }
 
     let error;
@@ -4287,6 +4354,7 @@
     els.closeModalBtn.addEventListener("click", closeLeadModal);
     els.cancelBtn.addEventListener("click", closeLeadModal);
     els.leadForm.addEventListener("submit", submitLead);
+    els.trafficType?.addEventListener("change", () => toggleReferralNameField({ clearWhenHidden: true }));
 
     els.closeStageModalBtn.addEventListener("click", closeStageModal);
     els.cancelStageBtn.addEventListener("click", closeStageModal);
