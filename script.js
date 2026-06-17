@@ -236,6 +236,11 @@
     return normalizeComparisonText(value) === "indicacao";
   }
 
+  function isDefaultLeadSourceName(value) {
+    const normalized = normalizeComparisonText(value);
+    return DEFAULT_LEAD_SOURCES.some((item) => normalizeComparisonText(item) === normalized);
+  }
+
   const STORAGE_CACHE_KEYS = [
     "crmPax.customStageTypes",
     "crmPax.hiddenPresetStageTypes"
@@ -989,7 +994,8 @@
       if (!normalizedName) return;
       map.set(normalizedName.toLowerCase(), {
         id: normalizedName.toLowerCase(),
-        name: normalizedName
+        name: normalizedName,
+        is_builtin: true
       });
     });
 
@@ -998,7 +1004,8 @@
       if (!name) return;
       map.set(name.toLowerCase(), {
         ...item,
-        name
+        name,
+        is_builtin: isDefaultLeadSourceName(name)
       });
     });
 
@@ -1007,6 +1014,10 @@
 
   function getLeadSourceNames() {
     return normalizeLeadSources(state.leadSources).map((item) => item.name);
+  }
+
+  function getLeadSourceItems() {
+    return normalizeLeadSources(state.leadSources);
   }
 
   function isSignupEmailAllowed(email) {
@@ -1127,9 +1138,13 @@
     return state.stages.filter((stage) => stage.stage_type === "fechado").map((stage) => stage.id);
   }
 
-  function getQualifiedClosedLeads(leads) {
+  function getClosedLeads(leads) {
     const closedIds = getClosedStageIds();
-    return (Array.isArray(leads) ? leads : []).filter((lead) => closedIds.includes(lead.stage_id) && hasLeadValue(lead));
+    return (Array.isArray(leads) ? leads : []).filter((lead) => closedIds.includes(lead.stage_id));
+  }
+
+  function getQualifiedClosedLeads(leads) {
+    return getClosedLeads(leads).filter((lead) => hasLeadValue(lead));
   }
 
   function syncSelectedLeadIds() {
@@ -2412,10 +2427,10 @@
   }
 
   function getDashboardMetrics(filtered = getFilteredLeads()) {
-    const closedIds = getClosedStageIds();
     const total = filtered.length;
+    const closedLeads = getClosedLeads(filtered);
     const qualifiedClosed = getQualifiedClosedLeads(filtered);
-    const closed = qualifiedClosed.length;
+    const closed = closedLeads.length;
     const conversion = total ? ((closed / total) * 100) : 0;
     const totalValue = qualifiedClosed.reduce((sum, item) => sum + Number(item.value || 0), 0);
     const avgTicket = qualifiedClosed.length ? totalValue / qualifiedClosed.length : 0;
@@ -2430,12 +2445,12 @@
     }));
     const topStage = [...byStage].sort((a, b) => b.count - a.count)[0];
 
-    const ownerTotals = qualifiedClosed.reduce((acc, lead) => {
+    const ownerTotals = closedLeads.reduce((acc, lead) => {
       const key = lead.owner || "Sem responsável";
-      acc[key] = (acc[key] || 0) + Number(lead.value || 0);
+      acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
-    const topOwner = Object.entries(ownerTotals).sort((a, b) => b[1] - a[1])[0];
+    const topOwner = Object.entries(ownerTotals).sort((a, b) => (b[1] - a[1]) || String(a[0]).localeCompare(String(b[0]), "pt-BR"))[0];
 
     const monthTotals = filtered.reduce((acc, lead) => {
       const key = getLeadMonthKey(lead);
@@ -2864,16 +2879,16 @@
       return;
     }
 
-    const items = getLeadSourceNames();
+    const items = getLeadSourceItems();
     if (!items.length) {
       els.leadSourcesConfigList.innerHTML = '<div class="saved-stage-types-empty">Nenhuma origem cadastrada.</div>';
       return;
     }
 
-    els.leadSourcesConfigList.innerHTML = items.map((name) => `
+    els.leadSourcesConfigList.innerHTML = items.map((item) => `
       <div class="saved-stage-type">
-        <button type="button" class="saved-stage-type-select" data-source-action="edit" data-source-name="${escapeHtml(name)}">${escapeHtml(name)}</button>
-        <button type="button" class="saved-stage-type-delete" data-source-action="delete" data-source-name="${escapeHtml(name)}">Excluir</button>
+        <button type="button" class="saved-stage-type-select" ${item.is_builtin ? 'disabled title="Origem padrao do sistema"' : `data-source-action="edit" data-source-name="${escapeHtml(item.name)}"`}>${escapeHtml(item.name)}${item.is_builtin ? ' <small>(padrao)</small>' : ""}</button>
+        ${item.is_builtin ? "" : `<button type="button" class="saved-stage-type-delete" data-source-action="delete" data-source-name="${escapeHtml(item.name)}">Excluir</button>`}
       </div>
     `).join("");
   }
@@ -2999,6 +3014,7 @@
     const filtered = getFilteredLeads();
     const metrics = getDashboardMetrics(filtered);
     const filteredAllMonths = getFilteredLeads({ ignoreMonth: true });
+    const closedLeads = getClosedLeads(filtered);
     const qualifiedClosed = getQualifiedClosedLeads(filtered);
 
     const trafficMap = filtered.reduce((acc, lead) => {
@@ -3007,11 +3023,18 @@
       return acc;
     }, {});
 
-    const ownerMap = qualifiedClosed.reduce((acc, lead) => {
+    const ownerRevenueMap = qualifiedClosed.reduce((acc, lead) => {
       const key = lead.owner || "Sem responsável";
       acc[key] = (acc[key] || 0) + Number(lead.value || 0);
       return acc;
     }, {});
+    const ownerCountMap = closedLeads.reduce((acc, lead) => {
+      const key = lead.owner || "Sem responsável";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const shouldUseOwnerRevenue = Object.values(ownerRevenueMap).some((value) => Number(value || 0) > 0);
+    const ownerMap = shouldUseOwnerRevenue ? ownerRevenueMap : ownerCountMap;
 
     const monthMap = filteredAllMonths.reduce((acc, lead) => {
       const key = getLeadMonthKey(lead);
@@ -3053,7 +3076,7 @@
 
     create("pipeline", "pipelineChart", makeChartConfig("bar", metrics.byStage.map((item) => item.name), [{ label: "Leads", data: metrics.byStage.map((item) => item.count), backgroundColor: stageColors(), borderColor: stageColors() }]));
     create("traffic", "trafficChart", makeChartConfig("doughnut", Object.keys(trafficMap), [{ label: "Origem", data: Object.values(trafficMap) }], { scales: {} }));
-    create("owner", "ownerChart", makeChartConfig("bar", Object.keys(ownerMap), [{ label: "Receita fechada", data: Object.values(ownerMap) }], { indexAxis: "y" }));
+    create("owner", "ownerChart", makeChartConfig("bar", Object.keys(ownerMap), [{ label: shouldUseOwnerRevenue ? "Receita fechada" : "Fechamentos", data: Object.values(ownerMap) }], { indexAxis: "y" }));
     create("yearlyDaily", "yearlyDailyChart", makeChartConfig("line", yearLabels, [{
       label: "Contatos diários",
       data: yearDateKeys.map((key) => yearDayMap[key] || 0),
@@ -3731,6 +3754,10 @@
 
     const currentName = String(sourceName || "").trim();
     if (!currentName) return;
+    if (isDefaultLeadSourceName(currentName)) {
+      alert("As origens padrao do sistema nao podem ser renomeadas.");
+      return;
+    }
     const nextName = window.prompt("Novo nome para a origem do lead:", currentName);
     if (!nextName || nextName.trim() === currentName) return;
 
@@ -3762,6 +3789,10 @@
 
     const currentName = String(sourceName || "").trim();
     if (!currentName) return;
+    if (isDefaultLeadSourceName(currentName)) {
+      alert("As origens padrao do sistema nao podem ser excluidas.");
+      return;
+    }
 
     const fallbackName = getLeadSourceNames().find((item) => item !== currentName) || DEFAULT_LEAD_SOURCES[0];
     if (!fallbackName) {

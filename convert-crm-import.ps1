@@ -14,6 +14,14 @@ if (-not $OutputDir) {
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
+$LabelIndicacao = "Indica$([char]0x00E7)$([char]0x00E3)o"
+$LabelIndicacaoColaborador = "$LabelIndicacao Colaborador"
+$LabelApresentacaoNegociacao = "Apresenta$([char]0x00E7)$([char]0x00E3)o/Negocia$([char]0x00E7)$([char]0x00E3)o"
+$LabelNaoResponde = "N$([char]0x00E3)o responde"
+$LabelNaoTemInteresse = "N$([char]0x00E3)o tem interesse"
+$LabelJaEAssociado = "J$([char]0x00E1) $([char]0x00E9) associado"
+$LabelClienteNaoPodeReativar = "Cliente n$([char]0x00E3)o pode reativar o plano"
+
 function Normalize-Whitespace {
   param([AllowNull()][string]$Value)
 
@@ -280,7 +288,7 @@ function Get-PipelineFromText {
     $lookup -match "nao consegue reativar" -or
     $lookup -match "nao seria possivel reativar"
   ) {
-    return "Cliente não pode reativar o plano"
+    return $LabelClienteNaoPodeReativar
   }
 
   if (
@@ -291,7 +299,7 @@ function Get-PipelineFromText {
     $lookup -match "ja tem plano" -or
     $lookup -match "ja possui plano"
   ) {
-    return "Já é associado"
+    return $LabelJaEAssociado
   }
 
   if (
@@ -315,7 +323,7 @@ function Get-PipelineFromText {
     $lookup -match "nao e possivel fazer o plano" -or
     $lookup -match "nao foi possivel fazer o plano"
   ) {
-    return "Não tem interesse"
+    return $LabelNaoTemInteresse
   }
 
   if (
@@ -341,7 +349,7 @@ function Get-PipelineFromText {
     $lookup -match "caixa postal" -or
     $lookup -match "mensagens temporarias"
   ) {
-    return "Não responde"
+    return $LabelNaoResponde
   }
 
   if (
@@ -368,7 +376,7 @@ function Get-PipelineFromText {
     $lookup -match "avaliando a possibilidade" -or
     $lookup -match "priorizar outros assuntos"
   ) {
-    return "Apresentação/Negociação"
+    return $LabelApresentacaoNegociacao
   }
 
   if (
@@ -398,6 +406,10 @@ function Get-PipelineFromText {
     return "Follow-Up"
   }
 
+  if ($lookup -match "caixa postal") {
+    return $LabelNaoResponde
+  }
+
   if (
     $lookup -match "caixa postal"
   ) {
@@ -415,6 +427,10 @@ function Get-LeadSourceFromText {
 
   $joined = (($Texts | ForEach-Object { Normalize-Whitespace $_ }) -join " ").Trim()
   $lookup = Normalize-LookupText $joined
+
+  if ($lookup -match "indicac" -or $lookup -match "quem indicou") {
+    return $LabelIndicacao
+  }
 
   if (
     $lookup -match "indicac" -or
@@ -512,22 +528,102 @@ function Write-SemicolonCsv {
 }
 
 function Build-Observation {
-  param(
-    [string]$SourceLabel,
-    [hashtable]$Fields
-  )
+  param([string[]]$Texts)
 
   $parts = New-Object System.Collections.Generic.List[string]
-  $parts.Add("Origem: $SourceLabel")
+  foreach ($text in $Texts) {
+    $value = Normalize-Whitespace $text
+    if (-not $value) { continue }
+    if (-not $parts.Contains($value)) {
+      $parts.Add($value)
+    }
+  }
+  return ($parts -join " | ")
+}
 
-  foreach ($entry in $Fields.GetEnumerator() | Sort-Object Name) {
-    $value = Normalize-Whitespace $entry.Value
-    if ($value) {
-      $parts.Add("$($entry.Name): $value")
+function Get-UniqueTextList {
+  param([string[]]$Texts)
+
+  $result = New-Object System.Collections.Generic.List[string]
+  $seen = New-Object 'System.Collections.Generic.HashSet[string]'
+
+  foreach ($text in $Texts) {
+    $value = Normalize-Whitespace $text
+    if (-not $value) { continue }
+    $key = Normalize-LookupText $value
+    if ($seen.Add($key)) {
+      $result.Add($value) | Out-Null
     }
   }
 
-  return ($parts -join " | ")
+  return @($result)
+}
+
+function Get-ObservationFragments {
+  param([string]$Text)
+
+  $value = Normalize-Whitespace $Text
+  if (-not $value) { return @() }
+
+  $patterns = @(
+    'Detalhes:\s*([^|]+)',
+    'Status 1:\s*([^|]+)',
+    'Status original:\s*([^|]+)',
+    'Status do atendimento:\s*([^|]+)',
+    'Status final:\s*([^|]+)',
+    'Motivo nao fechamento:\s*([^|]+)'
+  )
+
+  $parts = New-Object System.Collections.Generic.List[string]
+  foreach ($pattern in $patterns) {
+    foreach ($match in [regex]::Matches($value, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+      $parts.Add((Normalize-Whitespace $match.Groups[1].Value)) | Out-Null
+    }
+  }
+
+  if ($parts.Count) {
+    return @(Get-UniqueTextList $parts.ToArray())
+  }
+
+  $segments = $value -split '\s*\|\s*'
+  $kept = New-Object System.Collections.Generic.List[string]
+  foreach ($segment in $segments) {
+    $piece = Normalize-Whitespace $segment
+    if (-not $piece) { continue }
+    $key = Normalize-LookupText $piece
+    if (
+      $key.StartsWith("origem:") -or
+      $key.StartsWith("canal original:") -or
+      $key.StartsWith("cidade:") -or
+      $key.StartsWith("contato pessoa:") -or
+      $key.StartsWith("mes referencia:") -or
+      $key.StartsWith("dia indicacao:") -or
+      $key.StartsWith("lider:") -or
+      $key.StartsWith("quantidade original:") -or
+      $key.StartsWith("origem detalhada:") -or
+      $key.StartsWith("data fechamento:") -or
+      $key.StartsWith("ja e cliente:")
+    ) {
+      continue
+    }
+    $kept.Add($piece) | Out-Null
+  }
+
+  return @(Get-UniqueTextList $kept.ToArray())
+}
+
+function Clean-ObservationText {
+  param([string]$Text)
+
+  $groups = [regex]::Split((Normalize-Whitespace $Text), '\s*\|\|\s*')
+  $fragments = New-Object System.Collections.Generic.List[string]
+  foreach ($group in $groups) {
+    foreach ($item in (Get-ObservationFragments $group)) {
+      $fragments.Add($item) | Out-Null
+    }
+  }
+
+  return ((Get-UniqueTextList $fragments.ToArray()) -join " | ")
 }
 
 function New-ImportRow {
@@ -617,12 +713,41 @@ function Get-PipelineRank {
 
   switch ($Pipeline) {
     "Fechado" { return 5 }
-    "Proposta" { return 4 }
-    "Em Contato" { return 3 }
-    "Novos Leads" { return 2 }
-    "Cancelado" { return 1 }
+    { $_ -eq $LabelApresentacaoNegociacao } { return 4 }
+    "Follow-Up" { return 3 }
+    { $_ -eq $LabelNaoResponde } { return 2 }
+    { $_ -eq $LabelNaoTemInteresse } { return 1 }
+    { $_ -eq $LabelJaEAssociado } { return 1 }
+    { $_ -eq $LabelClienteNaoPodeReativar } { return 1 }
     default { return 0 }
   }
+}
+
+function Finalize-ImportRow {
+  param($Row)
+
+  $cleanObservation = Clean-ObservationText $Row.observacoes
+
+  if ((Normalize-LookupText $Row.origem) -eq "indicacao") {
+    $Row.origem = $LabelIndicacao
+  }
+
+  if ((Normalize-LookupText $Row.rede_social) -eq "indicacao colaborador") {
+    $Row.rede_social = $LabelIndicacaoColaborador
+  }
+
+  $channelKey = Normalize-LookupText $Row.rede_social
+  if ($channelKey -in @("field sales", "sudoexpo", "cdl")) {
+    $Row.origem = "Evento Externo"
+  }
+
+  if (-not (Normalize-Whitespace $Row.responsavel)) {
+    $Row.responsavel = "LEIDIMAR"
+  }
+
+  $Row.observacoes = $cleanObservation
+  $Row.pipeline = Get-PipelineFromText @($Row.pipeline, $cleanObservation)
+  return $Row
 }
 
 $CrmWorkbookPath = Resolve-WorkbookPath $CrmWorkbookPath
@@ -686,14 +811,7 @@ try {
       continue
     }
 
-    $obs = Build-Observation "$((Split-Path $CrmWorkbookPath -Leaf)) > CRM (Empresas)" @{
-      "Contato pessoa" = $nomeContato
-      "Cidade"         = $cidade
-      "Canal original" = $formaProspeccao
-      "Status 1"       = $status1
-      "Status final"   = $status
-      "Detalhes"       = $temInteresse
-    }
+    $obs = Build-Observation @($temInteresse, $status1, $status)
 
     $allRows.Add((New-ImportRow `
       -Nome $empresa `
@@ -738,11 +856,7 @@ try {
       continue
     }
 
-    $obs = Build-Observation "$((Split-Path $CrmWorkbookPath -Leaf)) > Leads 2025" @{
-      "Ja e cliente"          = $jaCliente
-      "Status do atendimento" = $statusAtendimento
-      "Status final"          = $status
-    }
+    $obs = Build-Observation @($statusAtendimento, $status, $jaCliente)
 
     $allRows.Add((New-ImportRow `
       -Nome $nome `
@@ -780,10 +894,7 @@ try {
     if (Has-MeaningfulText @($orgData, $orgQuantidade, $orgNome, $orgContato, $orgRede, $orgVendedor, $orgStatus)) {
       $cleanContact = Clean-Phone $orgContato
       if ((Normalize-Whitespace $orgNome) -and $cleanContact) {
-        $obs = Build-Observation "$((Split-Path $MarketingWorkbookPath -Leaf)) > Vendas > Redes sociais organico" @{
-          "Quantidade original" = $orgQuantidade
-          "Status original"     = $orgStatus
-        }
+        $obs = Build-Observation @($orgStatus)
 
         $allRows.Add((New-ImportRow `
           -Nome $orgNome `
@@ -816,10 +927,7 @@ try {
     if (Has-MeaningfulText @($paidData, $paidQuantidade, $paidNome, $paidContato, $paidRede, $paidVendedor, $paidStatus)) {
       $cleanContact = Clean-Phone $paidContato
       if ((Normalize-Whitespace $paidNome) -and $cleanContact) {
-        $obs = Build-Observation "$((Split-Path $MarketingWorkbookPath -Leaf)) > Vendas > Redes sociais trafego pago" @{
-          "Quantidade original" = $paidQuantidade
-          "Status original"     = $paidStatus
-        }
+        $obs = Build-Observation @($paidStatus)
 
         $allRows.Add((New-ImportRow `
           -Nome $paidNome `
@@ -852,11 +960,7 @@ try {
     if (Has-MeaningfulText @($otherData, $otherQuantidade, $otherNome, $otherContato, $otherOrigem, $otherStatus, $otherResponsavel)) {
       $cleanContact = Clean-Phone $otherContato
       if ((Normalize-Whitespace $otherNome) -and $cleanContact) {
-        $obs = Build-Observation "$((Split-Path $MarketingWorkbookPath -Leaf)) > Vendas > Demais veiculos" @{
-          "Quantidade original" = $otherQuantidade
-          "Origem detalhada"    = $otherOrigem
-          "Status original"     = $otherStatus
-        }
+        $obs = Build-Observation @($otherStatus)
 
         $allRows.Add((New-ImportRow `
           -Nome $otherNome `
@@ -930,14 +1034,7 @@ try {
       continue
     }
 
-    $obs = Build-Observation "$((Split-Path $ReferralWorkbookPath -Leaf)) > PROGRAMA DE INDICACAO" @{
-      "Mes referencia"          = $mesReferencia
-      "Dia indicacao"           = $diaIndica
-      "Lider"                   = $lider
-      "Status original"         = $status
-      "Data fechamento"         = $dataFechamento
-      "Motivo nao fechamento"   = $motivoNaoFechamento
-    }
+    $obs = Build-Observation @($motivoNaoFechamento, $status)
 
     $startDate = Convert-DateToIso $diaIndica
     if (-not $startDate) {
@@ -959,8 +1056,8 @@ try {
       -Responsavel $vendedor `
       -Valor "" `
       -DataInicio $startDate `
-      -RedeSocial "Indicação Colaborador" `
-      -Origem "Indicação" `
+      -RedeSocial $LabelIndicacaoColaborador `
+      -Origem $LabelIndicacao `
       -IndicadoPor $colaborador `
       -SetorIndicado $setor `
       -Plano "" `
@@ -990,7 +1087,7 @@ $allRowsArray = @($allRowsArray | ForEach-Object {
   if (-not (Normalize-Whitespace $_.data_inicio)) {
     $_.data_inicio = Get-FallbackStartDate $_
   }
-  $_
+  Finalize-ImportRow $_
 })
 
 $allCsvColumns = @(
@@ -1086,7 +1183,7 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
     }
   }
 
-  $deduplicatedRows.Add($selected) | Out-Null
+  $deduplicatedRows.Add((Finalize-ImportRow $selected)) | Out-Null
 }
 
 $dateTag = Get-Date -Format "yyyyMMdd_HHmmss"

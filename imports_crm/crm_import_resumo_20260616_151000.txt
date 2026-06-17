@@ -1,0 +1,9 @@
+Arquivo: crm_import_deduplicado_20260616_151000.csv
+Linhas: 1255
+Apresentação/Negociação: 58
+Cliente não pode reativar o plano: 1
+Fechado: 252
+Follow-Up: 658
+Já é associado: 13
+Não responde: 124
+Não tem interesse: 149

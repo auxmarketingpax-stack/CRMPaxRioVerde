@@ -791,6 +791,11 @@ input:focus,select:focus,textarea:focus{
   font-size:13px;
 }
 
+.saved-stage-type-select:disabled{
+  opacity:.72;
+  cursor:default;
+}
+
 .saved-stage-type-delete{
   padding:8px 10px;
   color:#fecaca;
