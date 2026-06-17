@@ -1171,6 +1171,10 @@
       } else if (!plans.length && Number(leadValue || 0) > 0) {
         plans.push({ name: getDefaultPlanName(0), value: Number(leadValue || 0) });
       }
+      if (contractNumber && plans.length && !plans.some((item) => String(item?.contract_number || "").trim())) {
+        const targetPlan = plans.find((item) => !isNoPlanName(item?.name)) || plans[0];
+        if (targetPlan) targetPlan.contract_number = contractNumber;
+      }
       if (!observations.length && legacyText) observations.push({ date: "", text: legacyText });
       return {
         plan: legacyPlan || (plans[0]?.name || ""),
