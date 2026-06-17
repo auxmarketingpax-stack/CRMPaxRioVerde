@@ -35,6 +35,7 @@
     mobileOwnerFilter: $("mobileOwnerFilter"),
     mobileMonthFilter: $("mobileMonthFilter"),
     mobileLeadSourceFilter: $("mobileLeadSourceFilter"),
+    mobileSocialSourceFilter: $("mobileSocialSourceFilter"),
     mobileClearFiltersBtn: $("mobileClearFiltersBtn"),
     ownerFilterDropdown: $("ownerFilterDropdown"),
     ownerFilterBtn: $("ownerFilterBtn"),
@@ -51,6 +52,11 @@
     leadSourceFilterMenu: $("leadSourceFilterMenu"),
     leadSourceFilterLabel: $("leadSourceFilterLabel"),
     leadSourceFilter: $("leadSourceFilter"),
+    socialSourceFilterDropdown: $("socialSourceFilterDropdown"),
+    socialSourceFilterBtn: $("socialSourceFilterBtn"),
+    socialSourceFilterMenu: $("socialSourceFilterMenu"),
+    socialSourceFilterLabel: $("socialSourceFilterLabel"),
+    socialSourceFilter: $("socialSourceFilter"),
     selectAllLeads: $("selectAllLeads"),
     deleteSelectedBtn: $("deleteSelectedBtn"),
 
@@ -1158,7 +1164,8 @@
     [
       { dropdown: els.ownerFilterDropdown, btn: els.ownerFilterBtn, menu: els.ownerFilterMenu },
       { dropdown: els.monthFilterDropdown, btn: els.monthFilterBtn, menu: els.monthFilterMenu },
-      { dropdown: els.leadSourceFilterDropdown, btn: els.leadSourceFilterBtn, menu: els.leadSourceFilterMenu }
+      { dropdown: els.leadSourceFilterDropdown, btn: els.leadSourceFilterBtn, menu: els.leadSourceFilterMenu },
+      { dropdown: els.socialSourceFilterDropdown, btn: els.socialSourceFilterBtn, menu: els.socialSourceFilterMenu }
     ].forEach((item) => {
       if (!item.dropdown || item.dropdown === except) return;
       item.dropdown.classList.remove("open");
@@ -1235,6 +1242,7 @@
     if (els.mobileOwnerFilter) els.mobileOwnerFilter.value = els.ownerFilter?.value || "";
     if (els.mobileMonthFilter) els.mobileMonthFilter.value = els.monthFilter?.value || "";
     if (els.mobileLeadSourceFilter) els.mobileLeadSourceFilter.value = els.leadSourceFilter?.value || "";
+    if (els.mobileSocialSourceFilter) els.mobileSocialSourceFilter.value = els.socialSourceFilter?.value || "";
   }
 
   function normalizeMobileFilterTexts() {
@@ -2330,14 +2338,16 @@
     const owner = els.ownerFilter.value;
     const month = options.ignoreMonth ? "" : els.monthFilter.value;
     const leadSource = els.leadSourceFilter?.value || "";
+    const socialSource = els.socialSourceFilter?.value || "";
 
     return state.leads.filter((lead) => {
       const matchesSearch = !search || getLeadSearchText(lead).includes(search);
       const matchesOwner = !owner || lead.owner === owner;
       const matchesMonth = !month || getLeadMonthKey(lead) === month;
       const matchesLeadSource = !leadSource || String(lead.traffic_type || "") === leadSource;
+      const matchesSocialSource = !socialSource || String(lead.social_source || "") === socialSource;
 
-      return matchesSearch && matchesOwner && matchesMonth && matchesLeadSource;
+      return matchesSearch && matchesOwner && matchesMonth && matchesLeadSource && matchesSocialSource;
     });
   }
 
@@ -2345,10 +2355,13 @@
     const owners = [...new Set(state.leads.map((x) => x.owner).filter(Boolean))].sort();
     const months = [...new Set(state.leads.map((lead) => getLeadMonthKey(lead)).filter(Boolean))].sort();
     const leadSources = getLeadSourceNames();
+    const socialSources = [...new Set(state.leads.map((lead) => String(lead.social_source || "").trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     const currentOwner = els.ownerFilter.value;
     const currentMonth = els.monthFilter.value;
     const currentLeadSource = els.leadSourceFilter?.value || "";
+    const currentSocialSource = els.socialSourceFilter?.value || "";
 
     els.ownerFilter.innerHTML =
       '<option value="">Todos os responsáveis</option>' +
@@ -2362,6 +2375,12 @@
       els.leadSourceFilter.innerHTML =
         '<option value="">Todas as origens</option>' +
         leadSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+    }
+
+    if (els.socialSourceFilter) {
+      els.socialSourceFilter.innerHTML =
+        '<option value="">Todos os canais</option>' +
+        socialSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
     }
 
     if (els.mobileOwnerFilter) {
@@ -2382,6 +2401,12 @@
         leadSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
     }
 
+    if (els.mobileSocialSourceFilter) {
+      els.mobileSocialSourceFilter.innerHTML =
+        '<option value="">Todos os canais</option>' +
+        socialSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
+    }
+
     els.stage.innerHTML = state.stages
       .map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
       .join("");
@@ -2398,6 +2423,9 @@
     els.monthFilter.value = months.includes(currentMonth) ? currentMonth : "";
     if (els.leadSourceFilter) {
       els.leadSourceFilter.value = leadSources.includes(currentLeadSource) ? currentLeadSource : "";
+    }
+    if (els.socialSourceFilter) {
+      els.socialSourceFilter.value = socialSources.includes(currentSocialSource) ? currentSocialSource : "";
     }
     syncMobileFilterControls();
 
@@ -2422,6 +2450,14 @@
       els.leadSourceFilterMenu,
       els.leadSourceFilterLabel,
       "Todas as origens",
+      (_value, text) => text
+    );
+
+    renderFilterOptions(
+      els.socialSourceFilter,
+      els.socialSourceFilterMenu,
+      els.socialSourceFilterLabel,
+      "Todos os canais",
       (_value, text) => text
     );
   }
@@ -4479,10 +4515,16 @@
       renderAll();
     });
 
+    els.mobileSocialSourceFilter?.addEventListener("change", () => {
+      if (els.socialSourceFilter) els.socialSourceFilter.value = els.mobileSocialSourceFilter.value;
+      renderAll();
+    });
+
     els.mobileClearFiltersBtn?.addEventListener("click", () => {
       if (els.ownerFilter) els.ownerFilter.value = "";
       if (els.monthFilter) els.monthFilter.value = "";
       if (els.leadSourceFilter) els.leadSourceFilter.value = "";
+      if (els.socialSourceFilter) els.socialSourceFilter.value = "";
       syncMobileFilterControls();
       renderAll();
     });
@@ -4508,8 +4550,15 @@
       setFilterDropdownOpen(els.leadSourceFilterDropdown, els.leadSourceFilterBtn, els.leadSourceFilterMenu, !isOpen);
     });
 
+    els.socialSourceFilterBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = els.socialSourceFilterDropdown?.classList.contains("open");
+      closeFilterDropdowns(els.socialSourceFilterDropdown);
+      setFilterDropdownOpen(els.socialSourceFilterDropdown, els.socialSourceFilterBtn, els.socialSourceFilterMenu, !isOpen);
+    });
+
     document.addEventListener("click", (e) => {
-      if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target) || els.leadSourceFilterDropdown?.contains(e.target)) return;
+      if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target) || els.leadSourceFilterDropdown?.contains(e.target) || els.socialSourceFilterDropdown?.contains(e.target)) return;
       if (els.mobileFiltersBtn?.contains(e.target) || els.mobileFiltersPanel?.contains(e.target)) return;
       closeFilterDropdowns();
       if (isCompactViewport()) setMobileFiltersOpen(false);

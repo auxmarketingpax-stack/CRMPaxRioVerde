@@ -100,6 +100,12 @@
             <option value="">Todas as origens</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="mobileSocialSourceFilter">Canal de origem</label>
+          <select id="mobileSocialSourceFilter">
+            <option value="">Todos os canais</option>
+          </select>
+        </div>
       </div>
       <div class="mobile-filters-actions">
         <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
@@ -172,6 +178,17 @@
               <div class="filter-menu hidden" id="leadSourceFilterMenu" role="listbox" aria-label="Filtro de origem do lead"></div>
               <select id="leadSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
                 <option value="">Todas as origens</option>
+              </select>
+            </div>
+
+            <div class="filter-dropdown mobile-hidden-control" id="socialSourceFilterDropdown">
+              <button type="button" class="filter-btn" id="socialSourceFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                <span class="filter-btn-label" id="socialSourceFilterLabel">Todos os canais</span>
+                <span class="filter-btn-arrow">&#9662;</span>
+              </button>
+              <div class="filter-menu hidden" id="socialSourceFilterMenu" role="listbox" aria-label="Filtro de canal de origem"></div>
+              <select id="socialSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                <option value="">Todos os canais</option>
               </select>
             </div>
 
