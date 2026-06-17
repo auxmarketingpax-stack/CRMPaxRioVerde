@@ -397,6 +397,10 @@
     };
   }
 
+  function getStagePaletteColor(index = 0) {
+    return CHART_GREEN_PALETTE[Math.max(0, Number(index) || 0) % CHART_GREEN_PALETTE.length];
+  }
+
   function getIndicatorFilterOptions(referralNames = []) {
     return [
       { value: "", label: "Todas as indicacoes" },
@@ -2244,6 +2248,39 @@
     }
   }
 
+  async function syncStagePaletteWithGreenScale(stages = state.stages) {
+    if (!canManageStages()) return false;
+
+    const orderedStages = Array.isArray(stages) ? stages : [];
+    const nextStages = orderedStages.map((stage, index) => ({
+      ...stage,
+      color: getStagePaletteColor(index)
+    }));
+
+    const changedStages = nextStages.filter((stage, index) =>
+      sanitizeHexColor(orderedStages[index]?.color) !== stage.color
+    );
+
+    if (!changedStages.length) {
+      state.stages = nextStages;
+      return false;
+    }
+
+    const results = await Promise.all(
+      changedStages.map((stage) =>
+        state.supabase.from("stages").update({ color: stage.color }).eq("id", stage.id)
+      )
+    );
+
+    const failed = results.find((result) => result.error);
+    if (failed?.error) {
+      throw failed.error;
+    }
+
+    state.stages = nextStages;
+    return true;
+  }
+
   async function moveStagePosition(stageId, direction) {
     if (!canManageStages()) {
       alert("Somente administradores podem reordenar pipelines.");
@@ -2428,6 +2465,11 @@
     }
 
     state.stages = (stagesRes.data || []).map(normalizeStage);
+    try {
+      await syncStagePaletteWithGreenScale(state.stages);
+    } catch (paletteError) {
+      console.error(paletteError);
+    }
     const rawLeads = leadsRes.data || [];
     state.ownerCanonicalMap = buildCanonicalValueMap(rawLeads.map((lead) => lead?.owner), "owner");
     state.socialSourceCanonicalMap = buildCanonicalValueMap(rawLeads.map((lead) => lead?.social_source), "social_source");
