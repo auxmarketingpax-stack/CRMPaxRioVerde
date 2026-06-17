@@ -293,7 +293,20 @@
     return formatTitleCaseLabel(value);
   }
 
+  function getKnownOwnerLabel(value) {
+    const aliases = {
+      maria: "Maria Clara",
+      mariaclara: "Maria Clara",
+      willian: "Willyan",
+      willyan: "Willyan"
+    };
+
+    return aliases[getCompactAliasKey(value)] || "";
+  }
+
   function formatOwnerLabel(value) {
+    const knownLabel = getKnownOwnerLabel(value);
+    if (knownLabel) return knownLabel;
     return formatTitleCaseLabel(value);
   }
 
