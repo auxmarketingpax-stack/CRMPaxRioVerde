@@ -153,7 +153,10 @@
 
           <div class="topbar-actions">
             <input type="text" id="searchInput" class="mobile-hidden-control" placeholder="Buscar cliente, contato, canal de origem..." />
-            <button type="button" id="desktopFiltersBtn" class="btn btn-secondary mobile-hidden-control" aria-expanded="false">Filtros</button>
+            <button type="button" id="desktopFiltersBtn" class="btn btn-secondary mobile-hidden-control filters-trigger-btn" aria-expanded="false">
+              <span>Filtros</span>
+              <span id="desktopFiltersCount" class="filters-trigger-count hidden">0</span>
+            </button>
 
             <button type="button" id="importCsvBtn" class="btn btn-secondary mobile-hidden-control">Importar</button>
             <button type="button" id="exportCsvBtn" class="btn btn-secondary mobile-hidden-control">Exportar</button>
@@ -165,6 +168,16 @@
           </div>
 
           <div id="desktopFiltersPanel" class="desktop-filters-panel hidden">
+            <div class="desktop-filters-panel-head">
+              <div>
+                <strong>Filtros</strong>
+                <p>Refine rapidamente os dados do CRM.</p>
+              </div>
+              <button type="button" id="desktopFiltersCloseBtn" class="desktop-filters-close" aria-label="Fechar filtros">×</button>
+            </div>
+            <div id="desktopFiltersSummary" class="desktop-filters-summary">
+              <span class="filter-summary-empty">Nenhum filtro aplicado</span>
+            </div>
             <div class="desktop-filters-grid">
               <div class="filter-dropdown" id="ownerFilterDropdown">
                 <button type="button" class="filter-btn" id="ownerFilterBtn" aria-haspopup="listbox" aria-expanded="false">

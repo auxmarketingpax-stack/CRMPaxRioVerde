@@ -33,7 +33,10 @@
     mobileFiltersBtn: $("mobileFiltersBtn"),
     mobileFiltersPanel: $("mobileFiltersPanel"),
     desktopFiltersBtn: $("desktopFiltersBtn"),
+    desktopFiltersCount: $("desktopFiltersCount"),
     desktopFiltersPanel: $("desktopFiltersPanel"),
+    desktopFiltersSummary: $("desktopFiltersSummary"),
+    desktopFiltersCloseBtn: $("desktopFiltersCloseBtn"),
     mobileOwnerFilter: $("mobileOwnerFilter"),
     mobileMonthFilter: $("mobileMonthFilter"),
     mobileLeadSourceFilter: $("mobileLeadSourceFilter"),
@@ -1432,6 +1435,42 @@
     if (els.mobileLeadSourceFilter) els.mobileLeadSourceFilter.value = els.leadSourceFilter?.value || "";
     if (els.mobileSocialSourceFilter) els.mobileSocialSourceFilter.value = els.socialSourceFilter?.value || "";
     if (els.mobileIndicatorFilter) els.mobileIndicatorFilter.value = els.indicatorFilter?.value || "";
+  }
+
+  function getActiveFilterSummaryItems() {
+    const items = [];
+    const addItem = (label, value) => {
+      const normalized = String(value || "").trim();
+      if (!normalized) return;
+      items.push({ label, value: normalized });
+    };
+
+    addItem("Responsável", els.ownerFilter?.value || "");
+    addItem("Mês", formatMonthLabel(els.monthFilter?.value || ""));
+    addItem("Origem", els.leadSourceFilter?.value || "");
+    addItem("Canal", els.socialSourceFilter?.value || "");
+    addItem("Indicado por", els.indicatorFilter?.value || "");
+
+    return items;
+  }
+
+  function renderDesktopFilterSummary() {
+    const items = getActiveFilterSummaryItems();
+
+    if (els.desktopFiltersCount) {
+      els.desktopFiltersCount.textContent = String(items.length);
+      els.desktopFiltersCount.classList.toggle("hidden", items.length === 0);
+    }
+
+    if (els.desktopFiltersBtn) {
+      els.desktopFiltersBtn.classList.toggle("has-active-filters", items.length > 0);
+    }
+
+    if (!els.desktopFiltersSummary) return;
+
+    els.desktopFiltersSummary.innerHTML = items.length
+      ? items.map((item) => `<span class="filter-chip"><small>${escapeHtml(item.label)}</small>${escapeHtml(item.value)}</span>`).join("")
+      : '<span class="filter-summary-empty">Nenhum filtro aplicado</span>';
   }
 
   function normalizeMobileFilterTexts() {
@@ -3750,6 +3789,7 @@
       bindView("funil");
     }
     populateFilters();
+    renderDesktopFilterSummary();
     renderStats();
     renderPipeline();
     renderLeadTable();
@@ -4815,6 +4855,11 @@
     els.desktopFiltersBtn?.addEventListener("click", () => {
       setDesktopFiltersOpen(els.desktopFiltersPanel?.classList.contains("hidden"));
       closeFilterDropdowns();
+    });
+
+    els.desktopFiltersCloseBtn?.addEventListener("click", () => {
+      closeFilterDropdowns();
+      setDesktopFiltersOpen(false);
     });
 
     els.mobileOwnerFilter?.addEventListener("change", () => {
