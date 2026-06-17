@@ -179,6 +179,8 @@
     accessRequests: [],
     adminRequests: [],
     leadSources: [],
+    ownerCanonicalMap: new Map(),
+    socialSourceCanonicalMap: new Map(),
     history: [],
     activeView: "funil",
     historyLoaded: false,
@@ -236,6 +238,94 @@
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .toLowerCase();
+  }
+
+  function normalizeSpacing(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  function getCanonicalValueKey(value) {
+    return normalizeComparisonText(value)
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function getCompactAliasKey(value) {
+    return normalizeComparisonText(value).replace(/[^a-z0-9]+/g, "");
+  }
+
+  function formatTitleCaseLabel(value) {
+    const lowerWords = new Set(["da", "de", "do", "das", "dos", "e"]);
+    return normalizeSpacing(value)
+      .toLowerCase()
+      .split(" ")
+      .filter(Boolean)
+      .map((word, index) => {
+        if (index > 0 && lowerWords.has(word)) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(" ");
+  }
+
+  function getKnownSocialSourceLabel(value) {
+    const aliases = {
+      cdl: "CDL",
+      sudoexpo: "SUDOEXPO",
+      fieldsales: "Field Sales",
+      instagram: "Instagram",
+      facebook: "Facebook",
+      whatsapp: "WhatsApp",
+      whatsap: "WhatsApp",
+      whats: "WhatsApp",
+      wpp: "WhatsApp",
+      ligacao: "Ligação",
+      mensagem: "Mensagem",
+      telefone: "Telefone"
+    };
+
+    return aliases[getCompactAliasKey(value)] || "";
+  }
+
+  function formatSocialSourceLabel(value) {
+    const knownLabel = getKnownSocialSourceLabel(value);
+    if (knownLabel) return knownLabel;
+    return formatTitleCaseLabel(value);
+  }
+
+  function formatOwnerLabel(value) {
+    return formatTitleCaseLabel(value);
+  }
+
+  function getCanonicalDisplayLabel(value, kind) {
+    const normalized = normalizeSpacing(value);
+    if (!normalized) return "";
+    if (kind === "owner") return formatOwnerLabel(normalized);
+    if (kind === "social_source") return formatSocialSourceLabel(normalized);
+    return normalized;
+  }
+
+  function buildCanonicalValueMap(values = [], kind = "generic") {
+    const map = new Map();
+
+    (Array.isArray(values) ? values : []).forEach((value) => {
+      const normalized = normalizeSpacing(value);
+      if (!normalized) return;
+      const key = getCanonicalValueKey(normalized);
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, getCanonicalDisplayLabel(normalized, kind));
+      }
+    });
+
+    return map;
+  }
+
+  function getCanonicalMappedValue(value, map, kind = "generic") {
+    const normalized = normalizeSpacing(value);
+    if (!normalized) return "";
+    const key = getCanonicalValueKey(normalized);
+    return map?.get?.(key) || getCanonicalDisplayLabel(normalized, kind);
   }
 
   function isReferralLeadSource(value) {
@@ -561,6 +651,8 @@
     state.accessRequests = [];
     state.adminRequests = [];
     state.leadSources = [];
+    state.ownerCanonicalMap = new Map();
+    state.socialSourceCanonicalMap = new Map();
     state.history = [];
     state.activeView = "funil";
     state.historyLoaded = false;
@@ -962,11 +1054,15 @@
     return `__CRM_META__${JSON.stringify({ plan, plans, legacyText, observations, referral_name: referralName, referral_sector: referralSector })}`;
   }
 
-  function normalizeLead(lead) {
+  function normalizeLead(lead, options = {}) {
     const meta = getLeadMeta(lead?.notes || "", lead?.value || 0);
     const computedValue = getPlansTotalValue(meta.plans || []);
+    const ownerMap = options.ownerMap || state.ownerCanonicalMap;
+    const socialSourceMap = options.socialSourceMap || state.socialSourceCanonicalMap;
     return {
       ...lead,
+      owner: getCanonicalMappedValue(lead?.owner || "", ownerMap, "owner"),
+      social_source: getCanonicalMappedValue(lead?.social_source || "", socialSourceMap, "social_source"),
       value: computedValue || Number(lead?.value || 0) || 0,
       start_date: normalizeDateInput(lead?.start_date || "") || String(lead?.start_date || "").trim(),
       _meta: meta
@@ -2243,7 +2339,13 @@
     }
 
     state.stages = (stagesRes.data || []).map(normalizeStage);
-    state.leads = (leadsRes.data || []).map(normalizeLead);
+    const rawLeads = leadsRes.data || [];
+    state.ownerCanonicalMap = buildCanonicalValueMap(rawLeads.map((lead) => lead?.owner), "owner");
+    state.socialSourceCanonicalMap = buildCanonicalValueMap(rawLeads.map((lead) => lead?.social_source), "social_source");
+    state.leads = rawLeads.map((lead) => normalizeLead(lead, {
+      ownerMap: state.ownerCanonicalMap,
+      socialSourceMap: state.socialSourceCanonicalMap
+    }));
     state.leadSources = normalizeLeadSources(leadSourcesRes.data || []);
     state.customStageTypes = persistCustomStageTypes([
       ...getStoredCustomStageTypes(),
@@ -3380,10 +3482,10 @@
           created_by: state.currentUser?.id || null,
           name: String(name).trim(),
           contact: String(contact).trim(),
-          owner: String(owner).trim(),
+          owner: getCanonicalMappedValue(owner, state.ownerCanonicalMap, "owner"),
           value: importedValue,
           start_date: normalizedStartDate,
-          social_source: String(row.rede_social || row.social_source || "").trim(),
+          social_source: getCanonicalMappedValue(row.rede_social || row.social_source || "", state.socialSourceCanonicalMap, "social_source"),
           traffic_type: String(trafficType).trim(),
           notes: serializeLeadMeta({
             plan: planName,
@@ -3921,10 +4023,10 @@
       stage_id: els.stage.value,
       name: els.name.value.trim(),
       contact: els.contact.value.trim(),
-      owner: resolvedOwner,
+      owner: getCanonicalMappedValue(resolvedOwner, state.ownerCanonicalMap, "owner"),
       value: Number.isFinite(leadValue) ? leadValue : 0,
       start_date: normalizeDateInput(els.startDate.value) || els.startDate.value,
-      social_source: els.socialSource.value.trim(),
+      social_source: getCanonicalMappedValue(els.socialSource.value.trim(), state.socialSourceCanonicalMap, "social_source"),
       traffic_type: els.trafficType.value,
       notes: serializeLeadMeta({
         ...existingMeta,
