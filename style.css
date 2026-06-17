@@ -486,6 +486,25 @@ input:focus,select:focus,textarea:focus{
   flex-wrap:wrap;
   align-items:center
 }
+.desktop-filters-panel{
+  width:100%;
+  margin-top:14px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:rgba(15,31,23,.95);
+  box-shadow:var(--shadow);
+}
+.desktop-filters-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px;
+}
+.desktop-filters-actions{
+  margin-top:14px;
+  display:flex;
+  justify-content:flex-end;
+}
 .mobile-filters-panel{
   width:100%;
   margin-top:14px;

@@ -106,6 +106,12 @@
             <option value="">Todos os canais</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="mobileIndicatorFilter">Indicado por</label>
+          <select id="mobileIndicatorFilter">
+            <option value="">Todas as indicacoes</option>
+          </select>
+        </div>
       </div>
       <div class="mobile-filters-actions">
         <button type="button" id="mobileClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
@@ -147,50 +153,7 @@
 
           <div class="topbar-actions">
             <input type="text" id="searchInput" class="mobile-hidden-control" placeholder="Buscar cliente, contato, canal de origem..." />
-
-            <div class="filter-dropdown mobile-hidden-control" id="ownerFilterDropdown">
-              <button type="button" class="filter-btn" id="ownerFilterBtn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="filter-btn-label" id="ownerFilterLabel">Todos os responsaveis</span>
-                <span class="filter-btn-arrow">&#9662;</span>
-              </button>
-              <div class="filter-menu hidden" id="ownerFilterMenu" role="listbox" aria-label="Filtro de responsaveis"></div>
-              <select id="ownerFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
-                <option value="">Todos os responsaveis</option>
-              </select>
-            </div>
-
-            <div class="filter-dropdown mobile-hidden-control" id="monthFilterDropdown">
-              <button type="button" class="filter-btn" id="monthFilterBtn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="filter-btn-label" id="monthFilterLabel">Todos os meses</span>
-                <span class="filter-btn-arrow">&#9662;</span>
-              </button>
-              <div class="filter-menu hidden" id="monthFilterMenu" role="listbox" aria-label="Filtro de meses"></div>
-              <select id="monthFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
-                <option value="">Todos os meses</option>
-              </select>
-            </div>
-
-            <div class="filter-dropdown mobile-hidden-control" id="leadSourceFilterDropdown">
-              <button type="button" class="filter-btn" id="leadSourceFilterBtn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="filter-btn-label" id="leadSourceFilterLabel">Todas as origens</span>
-                <span class="filter-btn-arrow">&#9662;</span>
-              </button>
-              <div class="filter-menu hidden" id="leadSourceFilterMenu" role="listbox" aria-label="Filtro de origem do lead"></div>
-              <select id="leadSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
-                <option value="">Todas as origens</option>
-              </select>
-            </div>
-
-            <div class="filter-dropdown mobile-hidden-control" id="socialSourceFilterDropdown">
-              <button type="button" class="filter-btn" id="socialSourceFilterBtn" aria-haspopup="listbox" aria-expanded="false">
-                <span class="filter-btn-label" id="socialSourceFilterLabel">Todos os canais</span>
-                <span class="filter-btn-arrow">&#9662;</span>
-              </button>
-              <div class="filter-menu hidden" id="socialSourceFilterMenu" role="listbox" aria-label="Filtro de canal de origem"></div>
-              <select id="socialSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
-                <option value="">Todos os canais</option>
-              </select>
-            </div>
+            <button type="button" id="desktopFiltersBtn" class="btn btn-secondary mobile-hidden-control" aria-expanded="false">Filtros</button>
 
             <button type="button" id="importCsvBtn" class="btn btn-secondary mobile-hidden-control">Importar</button>
             <button type="button" id="exportCsvBtn" class="btn btn-secondary mobile-hidden-control">Exportar</button>
@@ -199,6 +162,68 @@
             <button type="button" id="historyBtn" class="btn btn-history hidden" data-admin-only="true">Historico</button>
             <button type="button" id="addLeadBtn" class="btn btn-primary">+ Novo Lead</button>
             <button type="button" id="addStageBtn" class="btn btn-secondary hidden" data-admin-only="true">+ Pipeline</button>
+          </div>
+
+          <div id="desktopFiltersPanel" class="desktop-filters-panel hidden">
+            <div class="desktop-filters-grid">
+              <div class="filter-dropdown" id="ownerFilterDropdown">
+                <button type="button" class="filter-btn" id="ownerFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="filter-btn-label" id="ownerFilterLabel">Todos os responsaveis</span>
+                  <span class="filter-btn-arrow">&#9662;</span>
+                </button>
+                <div class="filter-menu hidden" id="ownerFilterMenu" role="listbox" aria-label="Filtro de responsaveis"></div>
+                <select id="ownerFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                  <option value="">Todos os responsaveis</option>
+                </select>
+              </div>
+
+              <div class="filter-dropdown" id="monthFilterDropdown">
+                <button type="button" class="filter-btn" id="monthFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="filter-btn-label" id="monthFilterLabel">Todos os meses</span>
+                  <span class="filter-btn-arrow">&#9662;</span>
+                </button>
+                <div class="filter-menu hidden" id="monthFilterMenu" role="listbox" aria-label="Filtro de meses"></div>
+                <select id="monthFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                  <option value="">Todos os meses</option>
+                </select>
+              </div>
+
+              <div class="filter-dropdown" id="leadSourceFilterDropdown">
+                <button type="button" class="filter-btn" id="leadSourceFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="filter-btn-label" id="leadSourceFilterLabel">Todas as origens</span>
+                  <span class="filter-btn-arrow">&#9662;</span>
+                </button>
+                <div class="filter-menu hidden" id="leadSourceFilterMenu" role="listbox" aria-label="Filtro de origem do lead"></div>
+                <select id="leadSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                  <option value="">Todas as origens</option>
+                </select>
+              </div>
+
+              <div class="filter-dropdown" id="socialSourceFilterDropdown">
+                <button type="button" class="filter-btn" id="socialSourceFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="filter-btn-label" id="socialSourceFilterLabel">Todos os canais</span>
+                  <span class="filter-btn-arrow">&#9662;</span>
+                </button>
+                <div class="filter-menu hidden" id="socialSourceFilterMenu" role="listbox" aria-label="Filtro de canal de origem"></div>
+                <select id="socialSourceFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                  <option value="">Todos os canais</option>
+                </select>
+              </div>
+
+              <div class="filter-dropdown" id="indicatorFilterDropdown">
+                <button type="button" class="filter-btn" id="indicatorFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="filter-btn-label" id="indicatorFilterLabel">Todas as indicacoes</span>
+                  <span class="filter-btn-arrow">&#9662;</span>
+                </button>
+                <div class="filter-menu hidden" id="indicatorFilterMenu" role="listbox" aria-label="Filtro de indicado por"></div>
+                <select id="indicatorFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                  <option value="">Todas as indicacoes</option>
+                </select>
+              </div>
+            </div>
+            <div class="desktop-filters-actions">
+              <button type="button" id="desktopClearFiltersBtn" class="btn btn-secondary">Limpar filtros</button>
+            </div>
           </div>
         </header>
 
@@ -268,6 +293,7 @@
               <div class="report-card"><span>Leads pagos</span><strong id="reportPaidCount">0</strong></div>
               <div class="report-card"><span>Leads organicos</span><strong id="reportOrganicCount">0</strong></div>
               <div class="report-card"><span>Maior responsavel</span><strong id="reportTopOwner">-</strong></div>
+              <div class="report-card"><span>Maior indicacao</span><strong id="reportTopReferral">-</strong></div>
               <div class="report-card"><span>Melhor pipeline</span><strong id="reportTopStage">-</strong></div>
               <div class="report-card"><span>Mes com mais leads</span><strong id="reportBestMonth">-</strong></div>
               <div class="report-card"><span>Planos fechados</span><strong id="reportClosedPlans">0</strong></div>
@@ -297,6 +323,14 @@
               <div class="chart-card">
                 <h4>Leads por canal de origem</h4>
                 <canvas id="socialChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Media mensal de fechamentos por vendedor</h4>
+                <canvas id="ownerMonthlyAverageChart"></canvas>
+              </div>
+              <div class="chart-card">
+                <h4>Indicacoes por pessoa e setor</h4>
+                <canvas id="referralSectorChart"></canvas>
               </div>
               <div class="chart-card">
                 <h4>Fechamentos por plano</h4>

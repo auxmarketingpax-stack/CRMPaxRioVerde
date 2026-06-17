@@ -32,11 +32,15 @@
     searchInput: $("searchInput"),
     mobileFiltersBtn: $("mobileFiltersBtn"),
     mobileFiltersPanel: $("mobileFiltersPanel"),
+    desktopFiltersBtn: $("desktopFiltersBtn"),
+    desktopFiltersPanel: $("desktopFiltersPanel"),
     mobileOwnerFilter: $("mobileOwnerFilter"),
     mobileMonthFilter: $("mobileMonthFilter"),
     mobileLeadSourceFilter: $("mobileLeadSourceFilter"),
     mobileSocialSourceFilter: $("mobileSocialSourceFilter"),
+    mobileIndicatorFilter: $("mobileIndicatorFilter"),
     mobileClearFiltersBtn: $("mobileClearFiltersBtn"),
+    desktopClearFiltersBtn: $("desktopClearFiltersBtn"),
     ownerFilterDropdown: $("ownerFilterDropdown"),
     ownerFilterBtn: $("ownerFilterBtn"),
     ownerFilterMenu: $("ownerFilterMenu"),
@@ -57,6 +61,11 @@
     socialSourceFilterMenu: $("socialSourceFilterMenu"),
     socialSourceFilterLabel: $("socialSourceFilterLabel"),
     socialSourceFilter: $("socialSourceFilter"),
+    indicatorFilterDropdown: $("indicatorFilterDropdown"),
+    indicatorFilterBtn: $("indicatorFilterBtn"),
+    indicatorFilterMenu: $("indicatorFilterMenu"),
+    indicatorFilterLabel: $("indicatorFilterLabel"),
+    indicatorFilter: $("indicatorFilter"),
     selectAllLeads: $("selectAllLeads"),
     deleteSelectedBtn: $("deleteSelectedBtn"),
 
@@ -94,6 +103,7 @@
     reportOrganicCount: $("reportOrganicCount"),
     reportAvgTicket: $("reportAvgTicket"),
     reportTopOwner: $("reportTopOwner"),
+    reportTopReferral: $("reportTopReferral"),
     reportTopStage: $("reportTopStage"),
     reportBestMonth: $("reportBestMonth"),
     reportClosedPlans: $("reportClosedPlans"),
@@ -204,6 +214,8 @@
       yearlyDaily: null,
       monthly: null,
       social: null,
+      ownerMonthlyAverage: null,
+      referralSector: null,
       planCount: null,
       planRevenue: null
     },
@@ -221,6 +233,20 @@
   const DEFAULT_STAGE_COLOR = "#1F9D55";
   const CHART_JS_URL = "https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js";
   const ALLOWED_EXTERNAL_SCRIPT_URLS = new Set([CHART_JS_URL]);
+  const CHART_GREEN_PALETTE = [
+    "#14532D",
+    "#166534",
+    "#15803D",
+    "#16A34A",
+    "#22C55E",
+    "#4ADE80",
+    "#65A30D",
+    "#84CC16",
+    "#2F855A",
+    "#276749",
+    "#34D399",
+    "#86EFAC"
+  ];
   const USER_ROLE = {
     ADMIN: "admin",
     USER: "user"
@@ -339,6 +365,43 @@
     if (!normalized) return "";
     const key = getCanonicalValueKey(normalized);
     return map?.get?.(key) || getCanonicalDisplayLabel(normalized, kind);
+  }
+
+  function hexToRgba(hex, alpha = 1) {
+    const normalized = sanitizeHexColor(hex, "#22C55E").replace("#", "");
+    const red = parseInt(normalized.slice(0, 2), 16);
+    const green = parseInt(normalized.slice(2, 4), 16);
+    const blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  }
+
+  function getChartPalette(count, { fillAlpha = 0.78, borderAlpha = 1 } = {}) {
+    const size = Math.max(0, Number(count) || 0);
+    const fills = [];
+    const borders = [];
+
+    for (let index = 0; index < size; index += 1) {
+      const color = CHART_GREEN_PALETTE[index % CHART_GREEN_PALETTE.length];
+      fills.push(hexToRgba(color, fillAlpha));
+      borders.push(hexToRgba(color, borderAlpha));
+    }
+
+    return { fills, borders };
+  }
+
+  function getSingleSeriesColors(index = 0, { fillAlpha = 0.3, borderAlpha = 1 } = {}) {
+    const color = CHART_GREEN_PALETTE[index % CHART_GREEN_PALETTE.length];
+    return {
+      fill: hexToRgba(color, fillAlpha),
+      border: hexToRgba(color, borderAlpha)
+    };
+  }
+
+  function getIndicatorFilterOptions(referralNames = []) {
+    return [
+      { value: "", label: "Todas as indicacoes" },
+      ...(Array.isArray(referralNames) ? referralNames : []).map((name) => ({ value: name, label: name }))
+    ];
   }
 
   function isReferralLeadSource(value) {
@@ -1274,7 +1337,8 @@
       { dropdown: els.ownerFilterDropdown, btn: els.ownerFilterBtn, menu: els.ownerFilterMenu },
       { dropdown: els.monthFilterDropdown, btn: els.monthFilterBtn, menu: els.monthFilterMenu },
       { dropdown: els.leadSourceFilterDropdown, btn: els.leadSourceFilterBtn, menu: els.leadSourceFilterMenu },
-      { dropdown: els.socialSourceFilterDropdown, btn: els.socialSourceFilterBtn, menu: els.socialSourceFilterMenu }
+      { dropdown: els.socialSourceFilterDropdown, btn: els.socialSourceFilterBtn, menu: els.socialSourceFilterMenu },
+      { dropdown: els.indicatorFilterDropdown, btn: els.indicatorFilterBtn, menu: els.indicatorFilterMenu }
     ].forEach((item) => {
       if (!item.dropdown || item.dropdown === except) return;
       item.dropdown.classList.remove("open");
@@ -1347,11 +1411,23 @@
     });
   }
 
+  function setDesktopFiltersOpen(shouldOpen) {
+    if (!els.desktopFiltersPanel || !els.desktopFiltersBtn) return;
+    els.desktopFiltersPanel.classList.toggle("hidden", !shouldOpen);
+    els.desktopFiltersBtn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    els.desktopFiltersBtn.classList.toggle("is-open", shouldOpen);
+    requestAnimationFrame(() => {
+      updateStickyLayout();
+      syncPipelineScrollBars();
+    });
+  }
+
   function syncMobileFilterControls() {
     if (els.mobileOwnerFilter) els.mobileOwnerFilter.value = els.ownerFilter?.value || "";
     if (els.mobileMonthFilter) els.mobileMonthFilter.value = els.monthFilter?.value || "";
     if (els.mobileLeadSourceFilter) els.mobileLeadSourceFilter.value = els.leadSourceFilter?.value || "";
     if (els.mobileSocialSourceFilter) els.mobileSocialSourceFilter.value = els.socialSourceFilter?.value || "";
+    if (els.mobileIndicatorFilter) els.mobileIndicatorFilter.value = els.indicatorFilter?.value || "";
   }
 
   function normalizeMobileFilterTexts() {
@@ -2429,11 +2505,11 @@
   
   async function seedDefaultStages() {
     const defaults = [
-      { name: "Novos Leads", color: "#3b82f6", stage_type: "andamento", position: 0, created_by: state.currentUser.id },
-      { name: "Em Contato", color: "#f59e0b", stage_type: "andamento", position: 1, created_by: state.currentUser.id },
-      { name: "Proposta", color: "#8b5cf6", stage_type: "andamento", position: 2, created_by: state.currentUser.id },
+      { name: "Novos Leads", color: "#166534", stage_type: "andamento", position: 0, created_by: state.currentUser.id },
+      { name: "Em Contato", color: "#15803D", stage_type: "andamento", position: 1, created_by: state.currentUser.id },
+      { name: "Proposta", color: "#16A34A", stage_type: "andamento", position: 2, created_by: state.currentUser.id },
       { name: "Fechado", color: "#22c55e", stage_type: "fechado", position: 3, created_by: state.currentUser.id },
-      { name: "Cancelado", color: "#ef4444", stage_type: "cancelado", position: 4, created_by: state.currentUser.id }
+      { name: "Cancelado", color: "#65A30D", stage_type: "cancelado", position: 4, created_by: state.currentUser.id }
     ];
 
     const { error } = await state.supabase.from("stages").insert(defaults);
@@ -2454,6 +2530,7 @@
     const month = options.ignoreMonth ? "" : els.monthFilter.value;
     const leadSource = els.leadSourceFilter?.value || "";
     const socialSource = els.socialSourceFilter?.value || "";
+    const indicator = els.indicatorFilter?.value || "";
 
     return state.leads.filter((lead) => {
       const matchesSearch = !search || getLeadSearchText(lead).includes(search);
@@ -2461,8 +2538,9 @@
       const matchesMonth = !month || getLeadMonthKey(lead) === month;
       const matchesLeadSource = !leadSource || String(lead.traffic_type || "") === leadSource;
       const matchesSocialSource = !socialSource || String(lead.social_source || "") === socialSource;
+      const matchesIndicator = !indicator || getLeadReferralName(lead) === indicator;
 
-      return matchesSearch && matchesOwner && matchesMonth && matchesLeadSource && matchesSocialSource;
+      return matchesSearch && matchesOwner && matchesMonth && matchesLeadSource && matchesSocialSource && matchesIndicator;
     });
   }
 
@@ -2472,11 +2550,15 @@
     const leadSources = getLeadSourceNames();
     const socialSources = [...new Set(state.leads.map((lead) => String(lead.social_source || "").trim()).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const referralNames = [...new Set(state.leads.map((lead) => getLeadReferralName(lead)).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const indicatorOptions = getIndicatorFilterOptions(referralNames);
 
     const currentOwner = els.ownerFilter.value;
     const currentMonth = els.monthFilter.value;
     const currentLeadSource = els.leadSourceFilter?.value || "";
     const currentSocialSource = els.socialSourceFilter?.value || "";
+    const currentIndicator = els.indicatorFilter?.value || "";
 
     els.ownerFilter.innerHTML =
       '<option value="">Todos os responsáveis</option>' +
@@ -2522,6 +2604,18 @@
         socialSources.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("");
     }
 
+    if (els.indicatorFilter) {
+      els.indicatorFilter.innerHTML = indicatorOptions
+        .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+    }
+
+    if (els.mobileIndicatorFilter) {
+      els.mobileIndicatorFilter.innerHTML = indicatorOptions
+        .map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+    }
+
     els.stage.innerHTML = state.stages
       .map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
       .join("");
@@ -2541,6 +2635,9 @@
     }
     if (els.socialSourceFilter) {
       els.socialSourceFilter.value = socialSources.includes(currentSocialSource) ? currentSocialSource : "";
+    }
+    if (els.indicatorFilter) {
+      els.indicatorFilter.value = referralNames.includes(currentIndicator) ? currentIndicator : "";
     }
     syncMobileFilterControls();
 
@@ -2575,6 +2672,14 @@
       "Todos os canais",
       (_value, text) => text
     );
+
+    renderFilterOptions(
+      els.indicatorFilter,
+      els.indicatorFilterMenu,
+      els.indicatorFilterLabel,
+      "Todas as indicacoes",
+      (_value, text) => text
+    );
   }
 
   function getDashboardMetrics(filtered = getFilteredLeads()) {
@@ -2603,6 +2708,14 @@
     }, {});
     const topOwner = Object.entries(ownerTotals).sort((a, b) => (b[1] - a[1]) || String(a[0]).localeCompare(String(b[0]), "pt-BR"))[0];
 
+    const referralTotals = filtered.reduce((acc, lead) => {
+      const key = getLeadReferralName(lead);
+      if (!key) return acc;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const topReferral = Object.entries(referralTotals).sort((a, b) => (b[1] - a[1]) || String(a[0]).localeCompare(String(b[0]), "pt-BR"))[0];
+
     const monthTotals = filtered.reduce((acc, lead) => {
       const key = getLeadMonthKey(lead);
       if (!key) return acc;
@@ -2628,7 +2741,7 @@
     const planSummary = Object.values(planSummaryMap)
       .sort((a, b) => (b.totalValue - a.totalValue) || a.plan.localeCompare(b.plan, "pt-BR"));
 
-    return { total, totalValue, closed, conversion, avgTicket, paidCount, organicCount, byStage, topStage, topOwner, bestMonth, planSummary };
+    return { total, totalValue, closed, conversion, avgTicket, paidCount, organicCount, byStage, topStage, topOwner, topReferral, bestMonth, planSummary };
   }
 
   function renderStats() {
@@ -2651,6 +2764,7 @@
     els.reportAvgTicket.textContent = brMoney(metrics.avgTicket);
     if (els.reportConversionRate) els.reportConversionRate.textContent = `${metrics.conversion.toFixed(1)}%`;
     els.reportTopOwner.textContent = metrics.topOwner?.[0] || "-";
+    if (els.reportTopReferral) els.reportTopReferral.textContent = metrics.topReferral?.[0] || "-";
     els.reportTopStage.textContent = metrics.topStage?.name || "-";
     els.reportBestMonth.textContent = metrics.bestMonth?.[0] ? formatMonthLabel(metrics.bestMonth[0]) : "-";
     if (els.reportClosedPlans) els.reportClosedPlans.textContent = metrics.planSummary.reduce((sum, item) => sum + item.count, 0);
@@ -3151,13 +3265,13 @@
   }
 
   function stageColors() {
-    return state.stages.map((stage) => sanitizeHexColor(stage.color));
+    return getChartPalette(state.stages.length);
   }
 
   function renderCharts() {
     if (typeof Chart === "undefined") return;
 
-    ["pipeline", "traffic", "owner", "yearlyDaily", "monthly", "social", "planCount", "planRevenue"].forEach(destroyChart);
+    ["pipeline", "traffic", "owner", "yearlyDaily", "monthly", "social", "ownerMonthlyAverage", "referralSector", "planCount", "planRevenue"].forEach(destroyChart);
 
     const reportView = $("view-relatorios");
     if (!reportView || !reportView.classList.contains("active-view")) return;
@@ -3167,6 +3281,7 @@
     const filteredAllMonths = getFilteredLeads({ ignoreMonth: true });
     const closedLeads = getClosedLeads(filtered);
     const qualifiedClosed = getQualifiedClosedLeads(filtered);
+    const closedLeadsAllMonths = getClosedLeads(filteredAllMonths);
 
     const trafficMap = filtered.reduce((acc, lead) => {
       const key = lead.traffic_type || "Não informado";
@@ -3209,6 +3324,30 @@
       return acc;
     }, {});
 
+    const averageMonthKeys = [...new Set(filteredAllMonths.map((lead) => getLeadMonthKey(lead)).filter(Boolean))];
+    const averageMonthCount = Math.max(averageMonthKeys.length, 1);
+    const ownerMonthlyAverageMap = closedLeadsAllMonths.reduce((acc, lead) => {
+      const key = lead.owner || "Sem responsável";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const ownerMonthlyAverageEntries = Object.entries(ownerMonthlyAverageMap)
+      .map(([key, value]) => [key, Number((value / averageMonthCount).toFixed(2))])
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+
+    const referralSectorMap = filtered.reduce((acc, lead) => {
+      const referralName = getLeadReferralName(lead);
+      if (!referralName) return acc;
+      const referralSector = getLeadReferralSector(lead) || "Sem setor";
+      const key = `${referralName} - ${referralSector}`;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const referralSectorEntries = Object.entries(referralSectorMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15);
+
     const planLabels = metrics.planSummary.map((item) => `${item.plan} - ${formatPlanValue(item.unitValue)}`);
     const yearChartTitle = $("yearlyChartTitle");
     if (yearChartTitle) yearChartTitle.textContent = `Contatos diários de ${reportYear} (dia a dia)`;
@@ -3224,10 +3363,14 @@
       if (key.endsWith("-01")) acc.push(index);
       return acc;
     }, []));
+    const pipelinePalette = stageColors();
+    const trafficPalette = getChartPalette(Object.keys(trafficMap).length);
+    const ownerPalette = getChartPalette(Object.keys(ownerMap).length);
+    const yearlyPalette = getSingleSeriesColors(4, { fillAlpha: 0.22, borderAlpha: 1 });
 
-    create("pipeline", "pipelineChart", makeChartConfig("bar", metrics.byStage.map((item) => item.name), [{ label: "Leads", data: metrics.byStage.map((item) => item.count), backgroundColor: stageColors(), borderColor: stageColors() }]));
-    create("traffic", "trafficChart", makeChartConfig("doughnut", Object.keys(trafficMap), [{ label: "Origem", data: Object.values(trafficMap) }], { scales: {} }));
-    create("owner", "ownerChart", makeChartConfig("bar", Object.keys(ownerMap), [{ label: shouldUseOwnerRevenue ? "Receita fechada" : "Fechamentos", data: Object.values(ownerMap) }], { indexAxis: "y" }));
+    create("pipeline", "pipelineChart", makeChartConfig("bar", metrics.byStage.map((item) => item.name), [{ label: "Leads", data: metrics.byStage.map((item) => item.count), backgroundColor: pipelinePalette.fills, borderColor: pipelinePalette.borders, borderWidth: 1.5 }]));
+    create("traffic", "trafficChart", makeChartConfig("doughnut", Object.keys(trafficMap), [{ label: "Origem", data: Object.values(trafficMap), backgroundColor: trafficPalette.fills, borderColor: trafficPalette.borders, borderWidth: 1.5 }], { scales: {} }));
+    create("owner", "ownerChart", makeChartConfig("bar", Object.keys(ownerMap), [{ label: shouldUseOwnerRevenue ? "Receita fechada" : "Fechamentos", data: Object.values(ownerMap), backgroundColor: ownerPalette.fills, borderColor: ownerPalette.borders, borderWidth: 1.5 }], { indexAxis: "y" }));
     create("yearlyDaily", "yearlyDailyChart", makeChartConfig("line", yearLabels, [{
       label: "Contatos diários",
       data: yearDateKeys.map((key) => yearDayMap[key] || 0),
@@ -3235,7 +3378,11 @@
       fill: true,
       pointRadius: 0,
       pointHoverRadius: 4,
-      borderWidth: 2
+      borderWidth: 2,
+      backgroundColor: yearlyPalette.fill,
+      borderColor: yearlyPalette.border,
+      pointBackgroundColor: yearlyPalette.border,
+      pointBorderColor: yearlyPalette.border
     }], {
       scales: {
         x: {
@@ -3256,12 +3403,20 @@
     }));
 
     const monthLabels = Object.keys(monthMap).sort();
-    create("monthly", "monthlyChart", makeChartConfig("line", monthLabels, [{ label: "Leads por mês", data: monthLabels.map((key) => monthMap[key]), tension: 0.3, fill: false }]));
+    const monthlyPalette = getSingleSeriesColors(2, { fillAlpha: 0.16, borderAlpha: 1 });
+    create("monthly", "monthlyChart", makeChartConfig("line", monthLabels, [{ label: "Leads por mês", data: monthLabels.map((key) => monthMap[key]), tension: 0.3, fill: true, backgroundColor: monthlyPalette.fill, borderColor: monthlyPalette.border, pointBackgroundColor: monthlyPalette.border, pointBorderColor: monthlyPalette.border, borderWidth: 2 }]));
 
     const socialEntries = Object.entries(socialMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    create("social", "socialChart", makeChartConfig("bar", socialEntries.map(([key]) => key), [{ label: "Leads", data: socialEntries.map(([, value]) => value) }]));
-    create("planCount", "planCountChart", makeChartConfig("bar", planLabels, [{ label: "Fechamentos", data: metrics.planSummary.map((item) => item.count) }]));
-    create("planRevenue", "planRevenueChart", makeChartConfig("bar", planLabels, [{ label: "Receita", data: metrics.planSummary.map((item) => item.totalValue) }]));
+    const socialPalette = getChartPalette(socialEntries.length);
+    const ownerMonthlyAveragePalette = getChartPalette(ownerMonthlyAverageEntries.length);
+    const referralSectorPalette = getChartPalette(referralSectorEntries.length);
+    const planCountPalette = getChartPalette(planLabels.length);
+    const planRevenuePalette = getChartPalette(planLabels.length, { fillAlpha: 0.62, borderAlpha: 1 });
+    create("social", "socialChart", makeChartConfig("bar", socialEntries.map(([key]) => key), [{ label: "Leads", data: socialEntries.map(([, value]) => value), backgroundColor: socialPalette.fills, borderColor: socialPalette.borders, borderWidth: 1.5 }]));
+    create("ownerMonthlyAverage", "ownerMonthlyAverageChart", makeChartConfig("bar", ownerMonthlyAverageEntries.map(([key]) => key), [{ label: "Média mensal", data: ownerMonthlyAverageEntries.map(([, value]) => value), backgroundColor: ownerMonthlyAveragePalette.fills, borderColor: ownerMonthlyAveragePalette.borders, borderWidth: 1.5 }], { indexAxis: "y" }));
+    create("referralSector", "referralSectorChart", makeChartConfig("bar", referralSectorEntries.map(([key]) => key), [{ label: "Indicações", data: referralSectorEntries.map(([, value]) => value), backgroundColor: referralSectorPalette.fills, borderColor: referralSectorPalette.borders, borderWidth: 1.5 }], { indexAxis: "y" }));
+    create("planCount", "planCountChart", makeChartConfig("bar", planLabels, [{ label: "Fechamentos", data: metrics.planSummary.map((item) => item.count), backgroundColor: planCountPalette.fills, borderColor: planCountPalette.borders, borderWidth: 1.5 }]));
+    create("planRevenue", "planRevenueChart", makeChartConfig("bar", planLabels, [{ label: "Receita", data: metrics.planSummary.map((item) => item.totalValue), backgroundColor: planRevenuePalette.fills, borderColor: planRevenuePalette.borders, borderWidth: 1.5 }]));
 
     setTimeout(() => {
       Object.values(state.charts).forEach((chart) => chart?.resize?.());
@@ -4615,6 +4770,11 @@
       setMobileFiltersOpen(els.mobileFiltersPanel?.classList.contains("hidden"));
     });
 
+    els.desktopFiltersBtn?.addEventListener("click", () => {
+      setDesktopFiltersOpen(els.desktopFiltersPanel?.classList.contains("hidden"));
+      closeFilterDropdowns();
+    });
+
     els.mobileOwnerFilter?.addEventListener("change", () => {
       if (els.ownerFilter) els.ownerFilter.value = els.mobileOwnerFilter.value;
       renderAll();
@@ -4635,12 +4795,29 @@
       renderAll();
     });
 
+    els.mobileIndicatorFilter?.addEventListener("change", () => {
+      if (els.indicatorFilter) els.indicatorFilter.value = els.mobileIndicatorFilter.value;
+      renderAll();
+    });
+
     els.mobileClearFiltersBtn?.addEventListener("click", () => {
       if (els.ownerFilter) els.ownerFilter.value = "";
       if (els.monthFilter) els.monthFilter.value = "";
       if (els.leadSourceFilter) els.leadSourceFilter.value = "";
       if (els.socialSourceFilter) els.socialSourceFilter.value = "";
+      if (els.indicatorFilter) els.indicatorFilter.value = "";
       syncMobileFilterControls();
+      renderAll();
+    });
+
+    els.desktopClearFiltersBtn?.addEventListener("click", () => {
+      if (els.ownerFilter) els.ownerFilter.value = "";
+      if (els.monthFilter) els.monthFilter.value = "";
+      if (els.leadSourceFilter) els.leadSourceFilter.value = "";
+      if (els.socialSourceFilter) els.socialSourceFilter.value = "";
+      if (els.indicatorFilter) els.indicatorFilter.value = "";
+      syncMobileFilterControls();
+      closeFilterDropdowns();
       renderAll();
     });
 
@@ -4672,11 +4849,20 @@
       setFilterDropdownOpen(els.socialSourceFilterDropdown, els.socialSourceFilterBtn, els.socialSourceFilterMenu, !isOpen);
     });
 
+    els.indicatorFilterBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = els.indicatorFilterDropdown?.classList.contains("open");
+      closeFilterDropdowns(els.indicatorFilterDropdown);
+      setFilterDropdownOpen(els.indicatorFilterDropdown, els.indicatorFilterBtn, els.indicatorFilterMenu, !isOpen);
+    });
+
     document.addEventListener("click", (e) => {
-      if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target) || els.leadSourceFilterDropdown?.contains(e.target) || els.socialSourceFilterDropdown?.contains(e.target)) return;
+      if (els.ownerFilterDropdown?.contains(e.target) || els.monthFilterDropdown?.contains(e.target) || els.leadSourceFilterDropdown?.contains(e.target) || els.socialSourceFilterDropdown?.contains(e.target) || els.indicatorFilterDropdown?.contains(e.target)) return;
       if (els.mobileFiltersBtn?.contains(e.target) || els.mobileFiltersPanel?.contains(e.target)) return;
+      if (els.desktopFiltersBtn?.contains(e.target) || els.desktopFiltersPanel?.contains(e.target)) return;
       closeFilterDropdowns();
       if (isCompactViewport()) setMobileFiltersOpen(false);
+      setDesktopFiltersOpen(false);
     });
 
     els.deleteSelectedBtn?.addEventListener("click", deleteSelectedLeads);
