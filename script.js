@@ -400,10 +400,6 @@
     };
   }
 
-  function getStagePaletteColor(index = 0) {
-    return CHART_GREEN_PALETTE[Math.max(0, Number(index) || 0) % CHART_GREEN_PALETTE.length];
-  }
-
   function getIndicatorFilterOptions(referralNames = []) {
     return [
       { value: "", label: "Todas as indicacoes" },
@@ -1439,14 +1435,16 @@
 
   function getActiveFilterSummaryItems() {
     const items = [];
-    const addItem = (label, value) => {
-      const normalized = String(value || "").trim();
-      if (!normalized) return;
-      items.push({ label, value: normalized });
+    const addItem = (label, rawValue, displayValue = rawValue) => {
+      const normalizedRaw = String(rawValue || "").trim();
+      if (!normalizedRaw) return;
+      const normalizedDisplay = String(displayValue || "").trim();
+      if (!normalizedDisplay) return;
+      items.push({ label, value: normalizedDisplay });
     };
 
     addItem("Responsável", els.ownerFilter?.value || "");
-    addItem("Mês", formatMonthLabel(els.monthFilter?.value || ""));
+    addItem("Mês", els.monthFilter?.value || "", formatMonthLabel(els.monthFilter?.value || ""));
     addItem("Origem", els.leadSourceFilter?.value || "");
     addItem("Canal", els.socialSourceFilter?.value || "");
     addItem("Indicado por", els.indicatorFilter?.value || "");
@@ -2287,39 +2285,6 @@
     }
   }
 
-  async function syncStagePaletteWithGreenScale(stages = state.stages) {
-    if (!canManageStages()) return false;
-
-    const orderedStages = Array.isArray(stages) ? stages : [];
-    const nextStages = orderedStages.map((stage, index) => ({
-      ...stage,
-      color: getStagePaletteColor(index)
-    }));
-
-    const changedStages = nextStages.filter((stage, index) =>
-      sanitizeHexColor(orderedStages[index]?.color) !== stage.color
-    );
-
-    if (!changedStages.length) {
-      state.stages = nextStages;
-      return false;
-    }
-
-    const results = await Promise.all(
-      changedStages.map((stage) =>
-        state.supabase.from("stages").update({ color: stage.color }).eq("id", stage.id)
-      )
-    );
-
-    const failed = results.find((result) => result.error);
-    if (failed?.error) {
-      throw failed.error;
-    }
-
-    state.stages = nextStages;
-    return true;
-  }
-
   async function moveStagePosition(stageId, direction) {
     if (!canManageStages()) {
       alert("Somente administradores podem reordenar pipelines.");
@@ -2504,11 +2469,6 @@
     }
 
     state.stages = (stagesRes.data || []).map(normalizeStage);
-    try {
-      await syncStagePaletteWithGreenScale(state.stages);
-    } catch (paletteError) {
-      console.error(paletteError);
-    }
     const rawLeads = leadsRes.data || [];
     state.ownerCanonicalMap = buildCanonicalValueMap(rawLeads.map((lead) => lead?.owner), "owner");
     state.socialSourceCanonicalMap = buildCanonicalValueMap(rawLeads.map((lead) => lead?.social_source), "social_source");
@@ -2586,11 +2546,11 @@
   
   async function seedDefaultStages() {
     const defaults = [
-      { name: "Novos Leads", color: "#166534", stage_type: "andamento", position: 0, created_by: state.currentUser.id },
-      { name: "Em Contato", color: "#15803D", stage_type: "andamento", position: 1, created_by: state.currentUser.id },
-      { name: "Proposta", color: "#16A34A", stage_type: "andamento", position: 2, created_by: state.currentUser.id },
+      { name: "Novos Leads", color: "#3b82f6", stage_type: "andamento", position: 0, created_by: state.currentUser.id },
+      { name: "Em Contato", color: "#f59e0b", stage_type: "andamento", position: 1, created_by: state.currentUser.id },
+      { name: "Proposta", color: "#8b5cf6", stage_type: "andamento", position: 2, created_by: state.currentUser.id },
       { name: "Fechado", color: "#22c55e", stage_type: "fechado", position: 3, created_by: state.currentUser.id },
-      { name: "Cancelado", color: "#65A30D", stage_type: "cancelado", position: 4, created_by: state.currentUser.id }
+      { name: "Cancelado", color: "#ef4444", stage_type: "cancelado", position: 4, created_by: state.currentUser.id }
     ];
 
     const { error } = await state.supabase.from("stages").insert(defaults);
