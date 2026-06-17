@@ -127,6 +127,8 @@
     value: $("value"),
     startDate: $("startDate"),
     stage: $("stage"),
+    contractNumberGroup: $("contractNumberGroup"),
+    contractNumber: $("contractNumber"),
     socialSource: $("socialSource"),
     trafficType: $("trafficType"),
     referralNameGroup: $("referralNameGroup"),
@@ -1014,8 +1016,77 @@
       .filter((item) => item.name);
   }
 
+  function isAutoClosingPlanDraft(plan = {}) {
+    return Boolean(plan?._autoCreatedClosing);
+  }
+
+  function hasPlanClosingMetadata(plan = {}) {
+    return Boolean(
+      String(plan?.contract_number || plan?.contractNumber || "").trim() ||
+      normalizeDateInput(plan?.closed_at || plan?.closedAt || "")
+    );
+  }
+
   function planSupportsClosingDetails(plan = {}) {
-    return !isNoPlanName(plan?.name) && Number(parseMonetaryValue(plan?.value)) > 0;
+    if (isNoPlanName(plan?.name)) return false;
+    if (isClosedStageId(els.stage?.value)) return true;
+    return Number(parseMonetaryValue(plan?.value)) > 0 || hasPlanClosingMetadata(plan);
+  }
+
+  function isPlanDraftMeaningful(plan = {}) {
+    if (isNoPlanName(plan?.name)) return false;
+    if (Number(parseMonetaryValue(plan?.value)) > 0) return true;
+    if (hasPlanClosingMetadata(plan)) return true;
+    return !isAutoClosingPlanDraft(plan) && Boolean(String(plan?.name || "").trim());
+  }
+
+  function hasMeaningfulPlanDrafts() {
+    return state.modalPlans.some((plan) => isPlanDraftMeaningful(plan));
+  }
+
+  function buildAutoClosingPlanDraft(index = 0) {
+    return {
+      name: getDefaultPlanName(index),
+      value: "",
+      contract_number: "",
+      closed_at: "",
+      _autoCreatedClosing: true
+    };
+  }
+
+  function ensureClosingPlanDraft() {
+    if (hasMeaningfulPlanDrafts()) return false;
+    state.modalPlans = [buildAutoClosingPlanDraft(0)];
+    return true;
+  }
+
+  function clearUnusedAutoClosingPlanDrafts() {
+    if (!state.modalPlans.length) return false;
+
+    const hasPersistableDraft = state.modalPlans.some((plan) => !isAutoClosingPlanDraft(plan) || isPlanDraftMeaningful(plan));
+    if (hasPersistableDraft) return false;
+
+    state.modalPlans = [];
+    return true;
+  }
+
+  function syncLeadPlanSection() {
+    const isClosingStage = isClosedStageId(els.stage?.value);
+    let changed = false;
+
+    if (isClosingStage) {
+      changed = ensureClosingPlanDraft();
+    } else {
+      changed = clearUnusedAutoClosingPlanDrafts();
+    }
+
+    const shouldShowPlans = Boolean(els.leadId?.value) || isClosingStage || hasMeaningfulPlanDrafts();
+    els.planGroup?.classList.toggle("hidden", !shouldShowPlans);
+    els.contractNumberGroup?.classList.toggle("hidden", !isClosingStage);
+
+    if (changed || state.modalPlans.length) {
+      renderPlanItems();
+    }
   }
 
   function getDefaultPlanName(index = 0) {
@@ -1080,6 +1151,7 @@
         plans: [],
         legacyText: text,
         observations: text ? [{ date: "", text }] : [],
+        contract_number: "",
         referral_name: "",
         referral_sector: ""
       };
@@ -1091,6 +1163,7 @@
       const observations = cleanObservationList(parsed?.observations || []);
       const plans = cleanPlanList(parsed?.plans || []);
       const legacyPlan = String(parsed?.plan || "").trim();
+      const contractNumber = String(parsed?.contract_number || parsed?.contractNumber || "").trim();
       const referralName = String(parsed?.referral_name || "").trim();
       const referralSector = String(parsed?.referral_sector || "").trim();
       if (!plans.length && legacyPlan) {
@@ -1104,6 +1177,7 @@
         plans,
         legacyText,
         observations,
+        contract_number: contractNumber,
         referral_name: referralName,
         referral_sector: referralSector
       };
@@ -1114,6 +1188,7 @@
         plans: [],
         legacyText: text,
         observations: text ? [{ date: "", text }] : [],
+        contract_number: "",
         referral_name: "",
         referral_sector: ""
       };
@@ -1125,12 +1200,13 @@
     const plans = cleanPlanList(meta.plans || []);
     const observations = cleanObservationList(meta.observations || []);
     const plan = plans[0]?.name || String(meta.plan || "").trim();
+    const contractNumber = String(meta.contract_number || meta.contractNumber || "").trim();
     const referralName = String(meta.referral_name || "").trim();
     const referralSector = String(meta.referral_sector || "").trim();
 
-    if (!plan && !plans.length && !observations.length && !referralName && !referralSector) return legacyText;
+    if (!plan && !plans.length && !observations.length && !contractNumber && !referralName && !referralSector) return legacyText;
 
-    return `__CRM_META__${JSON.stringify({ plan, plans, legacyText, observations, referral_name: referralName, referral_sector: referralSector })}`;
+    return `__CRM_META__${JSON.stringify({ plan, plans, legacyText, observations, contract_number: contractNumber, referral_name: referralName, referral_sector: referralSector })}`;
   }
 
   function normalizeLead(lead, options = {}) {
@@ -1232,6 +1308,19 @@
     return "Não fechou ainda";
   }
 
+  function getLeadContractNumbers(lead) {
+    const contracts = getLeadPlans(lead)
+      .map((item) => String(item?.contract_number || "").trim())
+      .filter(Boolean)
+      .join(", ");
+    if (contracts) return contracts;
+    return String(lead?._meta?.contract_number || "").trim();
+  }
+
+  function getLeadPrimaryContractNumber(lead) {
+    return String(getLeadContractNumbers(lead) || "").split(",").map((item) => item.trim()).find(Boolean) || "";
+  }
+
   function getLeadObservations(lead) {
     return cleanObservationList(lead?._meta?.observations || []);
   }
@@ -1260,7 +1349,8 @@
       getLeadReferralSector(lead),
       lead?._meta?.legacyText,
       getLeadPlan(lead),
-      ...getLeadPlans(lead).map((item) => `${item.name} ${item.value}`),
+      getLeadContractNumbers(lead),
+      ...getLeadPlans(lead).map((item) => `${item.name} ${item.value} ${item.contract_number || ""}`),
       ...getLeadObservations(lead).map((item) => item.text)
     ].join(" ").toLowerCase();
   }
@@ -1317,6 +1407,10 @@
 
   function getClosedStageIds() {
     return state.stages.filter((stage) => stage.stage_type === "fechado").map((stage) => stage.id);
+  }
+
+  function isClosedStageId(stageId) {
+    return getClosedStageIds().includes(stageId);
   }
 
   function getClosedLeads(leads) {
@@ -1965,8 +2059,9 @@
   }
 
   function addPlanFromDraft() {
-    state.modalPlans.push({ name: "Sem plano", value: 0 });
-    applyPlanSelection(state.modalPlans.length - 1, "Sem plano");
+    const nextPlanName = isClosedStageId(els.stage?.value) ? getDefaultPlanName(state.modalPlans.length) : "Sem plano";
+    state.modalPlans.push({ name: nextPlanName, value: isClosedStageId(els.stage?.value) ? "" : 0 });
+    applyPlanSelection(state.modalPlans.length - 1, nextPlanName);
     renderPlanItems();
   }
 
@@ -1978,11 +2073,13 @@
       if (Number.isNaN(index) || !state.modalPlans[index]) return;
       if (event.target.classList.contains("plan-select-input")) {
         applyPlanSelection(index, event.target.value);
+        if (state.modalPlans[index]) state.modalPlans[index]._autoCreatedClosing = false;
         renderPlanItems();
         return;
       }
       if (event.target.classList.contains("plan-name-input")) {
         const hadClosingDetails = planSupportsClosingDetails(state.modalPlans[index]);
+        state.modalPlans[index]._autoCreatedClosing = false;
         state.modalPlans[index].name = event.target.value;
         if (syncPlanDraftWithCatalog(index) || hadClosingDetails !== planSupportsClosingDetails(state.modalPlans[index])) {
           renderPlanItems();
@@ -1991,6 +2088,7 @@
       }
       if (event.target.classList.contains("plan-value-input")) {
         const hadClosingDetails = planSupportsClosingDetails(state.modalPlans[index]);
+        state.modalPlans[index]._autoCreatedClosing = false;
         state.modalPlans[index].value = event.target.value;
         if (hadClosingDetails !== planSupportsClosingDetails(state.modalPlans[index])) {
           renderPlanItems();
@@ -1999,10 +2097,12 @@
         return;
       }
       if (event.target.classList.contains("plan-contract-input")) {
+        state.modalPlans[index]._autoCreatedClosing = false;
         state.modalPlans[index].contract_number = event.target.value;
         return;
       }
       if (event.target.classList.contains("plan-closed-date-input")) {
+        state.modalPlans[index]._autoCreatedClosing = false;
         state.modalPlans[index].closed_at = normalizeDateInput(event.target.value);
       }
     };
@@ -2851,6 +2951,7 @@
               ${getLeadReferralName(lead) ? `<span><strong>Indicou:</strong> ${escapeHtml(getLeadReferralName(lead))}</span>` : ""}
               ${getLeadReferralSector(lead) ? `<span><strong>Setor do indicado:</strong> ${escapeHtml(getLeadReferralSector(lead))}</span>` : ""}
               <span><strong>Canal de origem:</strong> ${escapeHtml(lead.social_source || "-")}</span>
+              ${getLeadContractNumbers(lead) ? `<span><strong>Contrato:</strong> ${escapeHtml(getLeadContractNumbers(lead))}</span>` : ""}
             </div>
 
             ${getLeadLatestObservation(lead) ? `<div class="card-notes"><strong>Ultima observacao:</strong> ${escapeHtml(getLeadLatestObservation(lead).text)}${getLeadLatestObservation(lead).date ? `<small>${formatDate(getLeadLatestObservation(lead).date)}</small>` : ""}</div>` : ""}
@@ -3075,7 +3176,7 @@
         <td>${formatDate(lead.start_date)}</td>
         <td>${escapeHtml(lead.traffic_type || "-")}${getLeadReferralName(lead) ? `<br><small>Indicou: ${escapeHtml(getLeadReferralName(lead))}</small>` : ""}${getLeadReferralSector(lead) ? `<br><small>Setor: ${escapeHtml(getLeadReferralSector(lead))}</small>` : ""}</td>
         <td>${escapeHtml(lead.social_source || "-")}</td>
-        <td>${escapeHtml(getLeadPlanDisplayText(lead))}</td>
+        <td>${escapeHtml(getLeadPlanDisplayText(lead))}${getLeadContractNumbers(lead) ? `<br><small>Contrato: ${escapeHtml(getLeadContractNumbers(lead))}</small>` : ""}</td>
         <td>${escapeHtml(getStageName(lead.stage_id))}</td>
         <td>
           <div class="table-actions">
@@ -3623,6 +3724,7 @@
       "indicado_por",
       "setor_indicado",
       "plano",
+      "numero_contrato",
       "pipeline",
       "observacoes"
     ];
@@ -3640,6 +3742,7 @@
         csvEscape(getLeadReferralName(lead) || ""),
         csvEscape(getLeadReferralSector(lead) || ""),
         csvEscape(getLeadPlan(lead) || ""),
+        csvEscape(getLeadContractNumbers(lead) || ""),
         csvEscape(getStageName(lead.stage_id)),
         csvEscape(lead._meta?.legacyText || "")
       ].join(";"))
@@ -3672,7 +3775,7 @@
         const referralSector = String(row.setor_indicado || row.setor_do_indicado || row.referral_sector || "").trim();
         const legacyText = String(row.observacoes || row.notes || "").trim();
         const importedValue = parseMoney(row.quantidade || row.valor || row.value || 0);
-        const importedContractNumber = String(row.contrato || row.numero_contrato || row.contract_number || "").trim();
+        const importedContractNumber = String(row.ct || row.contrato || row.numero_contrato || row.contract_number || "").trim();
         const importedClosedAt = normalizeDateInput(row.data_fechamento || row.fechado_em || row.data || "") || "";
         const plan = String(row.plano || row.plan || "").trim();
         const planName = plan || (importedValue > 0 ? getDefaultPlanName(0) : "");
@@ -3701,6 +3804,7 @@
             plans,
             legacyText,
             observations: legacyText ? [{ date: "", text: legacyText }] : [],
+            contract_number: importedContractNumber,
             referral_name: isReferralLeadSource(trafficType) ? referralName : "",
             referral_sector: isReferralLeadSource(trafficType) ? referralSector : ""
           })
@@ -3771,7 +3875,6 @@
     els.leadId.value = lead?.id || "";
     els.modalTitle.textContent = lead ? "Editar Lead" : "Novo Lead";
     els.ownerGroup?.classList.toggle("hidden", !canAssignLeadOwner());
-    els.planGroup?.classList.toggle("hidden", !lead);
 
     els.name.value = lead?.name || "";
     els.contact.value = lead?.contact || "";
@@ -3786,6 +3889,7 @@
     }
     els.socialSource.value = lead?.social_source || "";
     els.trafficType.value = lead?.traffic_type || getLeadSourceNames()[0] || "";
+    if (els.contractNumber) els.contractNumber.value = getLeadPrimaryContractNumber(lead);
     els.referralName.value = getLeadReferralName(lead);
     els.referralSector.value = getLeadReferralSector(lead);
     toggleReferralNameField();
@@ -3797,6 +3901,7 @@
     }
     state.modalObservations = getLeadObservations(lead);
     renderPlanItems();
+    syncLeadPlanSection();
     renderObservationItems();
 
     openModalOverlay(els.modalOverlay, "#name");
@@ -4208,14 +4313,12 @@
         closed_at: supportsClosingDetails ? (normalizeDateInput(item?.closed_at || "") || "") : ""
       };
     });
-    const draftPlans = existingLead
-      ? cleanPlanList(normalizedModalPlans.map((item) => ({
-          name: item.name,
-          value: item.value,
-          contract_number: item.contract_number,
-          closed_at: item.closed_at
-        })))
-      : [];
+    const draftPlans = cleanPlanList(normalizedModalPlans.map((item) => ({
+      name: item.name,
+      value: item.value,
+      contract_number: item.contract_number,
+      closed_at: item.closed_at
+    })));
     const leadValue = getPlansTotalValue(draftPlans);
     const draftObservations = cleanObservationList(state.modalObservations);
     const resolvedOwner = canAssignLeadOwner()
@@ -4226,6 +4329,16 @@
     if (existingLead && invalidPlan) return alert("Ao adicionar um plano, informe tambem o valor.");
     const referralName = isReferralLeadSource(els.trafficType.value) ? els.referralName.value.trim() : "";
     const referralSector = isReferralLeadSource(els.trafficType.value) ? els.referralSector.value.trim() : "";
+    const contractNumber = isClosedStageId(els.stage.value)
+      ? String(els.contractNumber?.value || "").trim()
+      : String(existingMeta.contract_number || "").trim();
+
+    if (contractNumber && draftPlans.length) {
+      const targetPlan = draftPlans.find((item) => !isNoPlanName(item.name)) || draftPlans[0];
+      if (targetPlan && !String(targetPlan.contract_number || "").trim()) {
+        targetPlan.contract_number = contractNumber;
+      }
+    }
 
     const payload = {
       assigned_to: state.currentUser.id,
@@ -4244,6 +4357,7 @@
         plan: draftPlans[0]?.name || "",
         legacyText: existingMeta.legacyText,
         observations: draftObservations,
+        contract_number: contractNumber,
         referral_name: referralName,
         referral_sector: referralSector
       })
@@ -4945,6 +5059,7 @@
     els.closeModalBtn.addEventListener("click", closeLeadModal);
     els.cancelBtn.addEventListener("click", closeLeadModal);
     els.leadForm.addEventListener("submit", submitLead);
+    els.stage?.addEventListener("change", syncLeadPlanSection);
     els.trafficType?.addEventListener("change", () => toggleReferralNameField({ clearWhenHidden: true }));
 
     els.closeStageModalBtn.addEventListener("click", closeStageModal);

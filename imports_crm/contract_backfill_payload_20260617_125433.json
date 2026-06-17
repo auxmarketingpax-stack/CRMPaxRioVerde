@@ -1,0 +1,110 @@
+﻿{
+    "dry_run":  true,
+    "items":  [
+                  {
+                      "contact":  "64992200518",
+                      "contract_number":  "43188",
+                      "name":  "Andreia Sousa Silva"
+                  },
+                  {
+                      "contact":  "64992138791",
+                      "contract_number":  "42618",
+                      "name":  "Cleia gomes da silva"
+                  },
+                  {
+                      "contact":  "64992162273",
+                      "contract_number":  "43192",
+                      "name":  "Ana Paula de Oliveira Viana"
+                  },
+                  {
+                      "contact":  "64992154061",
+                      "contract_number":  "36737",
+                      "name":  "Andreia Soares dos Santos"
+                  },
+                  {
+                      "contact":  "64992928307",
+                      "contract_number":  "42774",
+                      "name":  "Lucia Helena Correia Duarte"
+                  },
+                  {
+                      "contact":  "64992744051",
+                      "contract_number":  "43146",
+                      "name":  "Sandra Maria da Silva Santos"
+                  },
+                  {
+                      "contact":  "64981567777",
+                      "contract_number":  "39678",
+                      "name":  "Rosenilda Silva Ferreira"
+                  },
+                  {
+                      "contact":  "64992273594",
+                      "contract_number":  "42788",
+                      "name":  "Edna Moreira da Costa"
+                  },
+                  {
+                      "contact":  "6492207001",
+                      "contract_number":  "41179",
+                      "name":  "Fabiana Neves"
+                  },
+                  {
+                      "contact":  "64992066998",
+                      "contract_number":  "43228",
+                      "name":  "Patrícia Pereira Martins"
+                  },
+                  {
+                      "contact":  "6493245946",
+                      "contract_number":  "41184",
+                      "name":  "María dos reis"
+                  },
+                  {
+                      "contact":  "5391455097",
+                      "contract_number":  "42773",
+                      "name":  "Carla Venzke Spiering"
+                  },
+                  {
+                      "contact":  "64993152802",
+                      "contract_number":  "43254",
+                      "name":  "Cizi Bezerra"
+                  },
+                  {
+                      "contact":  "6493305615",
+                      "contract_number":  "43424",
+                      "name":  "Laydislaine Martins Cabral de Oliveira"
+                  },
+                  {
+                      "contact":  "6496533336",
+                      "contract_number":  "43116",
+                      "name":  "Andreia Ferreira De Sousa"
+                  },
+                  {
+                      "contact":  "6492629869",
+                      "contract_number":  "43151",
+                      "name":  "Júlia Ribeiro"
+                  },
+                  {
+                      "contact":  "6499945903",
+                      "contract_number":  "43376",
+                      "name":  "Angélica Pereira Leal"
+                  },
+                  {
+                      "contact":  "6493317351",
+                      "contract_number":  "38550",
+                      "name":  "Maria das Dores"
+                  },
+                  {
+                      "contact":  "6492638506",
+                      "contract_number":  "43450",
+                      "name":  "Luciano pessoa profiro"
+                  },
+                  {
+                      "contact":  "6493305442",
+                      "contract_number":  "43266",
+                      "name":  "Ana Cláudia de Moraes Silva"
+                  },
+                  {
+                      "contact":  "6484294617",
+                      "contract_number":  "43267",
+                      "name":  "Renata Lopes Guerra"
+                  }
+              ]
+}

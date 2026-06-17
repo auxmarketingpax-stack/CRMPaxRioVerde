@@ -637,6 +637,11 @@ input:focus,select:focus,textarea:focus{
   padding:10px 12px;
 }
 .topbar-actions input{min-width:var(--control-min-width)}
+.topbar-actions #searchInput{
+  min-width:360px;
+  width:min(100%, 520px);
+  flex:1 1 420px
+}
 .topbar-actions .filter-dropdown{min-width:var(--control-min-width)}
 
 .view{display:none}

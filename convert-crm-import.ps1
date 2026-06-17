@@ -638,6 +638,7 @@ function New-ImportRow {
     [string]$IndicadoPor = "",
     [string]$SetorIndicado = "",
     [string]$Plano,
+    [string]$NumeroContrato = "",
     [string]$Pipeline,
     [string]$Observacoes,
     [string]$SourceFile,
@@ -657,6 +658,7 @@ function New-ImportRow {
     indicado_por = Normalize-Whitespace $IndicadoPor
     setor_indicado = Normalize-Whitespace $SetorIndicado
     plano        = Normalize-Whitespace $Plano
+    numero_contrato = Normalize-Whitespace $NumeroContrato
     pipeline     = Normalize-Whitespace $Pipeline
     observacoes  = Normalize-Whitespace $Observacoes
     source_file  = $SourceFile
@@ -918,6 +920,7 @@ try {
 
     $paidData = Get-CellText $vendasSheet $row 9
     $paidQuantidade = Get-CellText $vendasSheet $row 10
+    $paidContrato = Get-CellText $vendasSheet $row 11
     $paidNome = Get-CellText $vendasSheet $row 12
     $paidContato = Get-CellText $vendasSheet $row 13
     $paidRede = Get-CellText $vendasSheet $row 14
@@ -938,6 +941,7 @@ try {
           -RedeSocial $paidRede `
           -Origem (Get-LeadSourceFromText "Pago" @($paidRede, $paidStatus)) `
           -Plano "" `
+          -NumeroContrato $paidContrato `
           -Pipeline (Get-PipelineFromText @($paidStatus)) `
           -Observacoes $obs `
           -SourceFile (Split-Path $MarketingWorkbookPath -Leaf) `
@@ -1101,6 +1105,7 @@ $allCsvColumns = @(
   "indicado_por",
   "setor_indicado",
   "plano",
+  "numero_contrato",
   "pipeline",
   "observacoes"
 )
@@ -1116,6 +1121,7 @@ $auditColumns = @(
   "indicado_por",
   "setor_indicado",
   "plano",
+  "numero_contrato",
   "pipeline",
   "observacoes",
   "source_file",
@@ -1147,6 +1153,7 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
     $preferredReferrer = @($items | ForEach-Object { Normalize-Whitespace $_.indicado_por } | Where-Object { $_ }) | Select-Object -First 1
     $preferredReferralSector = @($items | ForEach-Object { Normalize-Whitespace $_.setor_indicado } | Where-Object { $_ }) | Select-Object -First 1
     $preferredPlan = @($items | ForEach-Object { Normalize-Whitespace $_.plano } | Where-Object { $_ }) | Select-Object -First 1
+    $preferredContractNumber = @($items | ForEach-Object { Normalize-Whitespace $_.numero_contrato } | Where-Object { $_ }) | Select-Object -First 1
     $selectedOriginKey = Normalize-LookupText $selected.origem
 
     $selected = [pscustomobject]@{
@@ -1160,6 +1167,7 @@ foreach ($group in ($allRowsArray | Group-Object contato)) {
       indicado_por = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.indicado_por) { $selected.indicado_por } else { $preferredReferrer } } else { "" }
       setor_indicado = if ($selectedOriginKey -eq "indicacao") { if (Normalize-Whitespace $selected.setor_indicado) { $selected.setor_indicado } else { $preferredReferralSector } } else { "" }
       plano        = if (Normalize-Whitespace $selected.plano) { $selected.plano } else { $preferredPlan }
+      numero_contrato = if (Normalize-Whitespace $selected.numero_contrato) { $selected.numero_contrato } else { $preferredContractNumber }
       pipeline     = Get-PipelineFromText @($selected.pipeline, ($mergedNotes -join " || "))
       observacoes  = Normalize-Whitespace ($mergedNotes -join " || ")
       source_file  = $selected.source_file
