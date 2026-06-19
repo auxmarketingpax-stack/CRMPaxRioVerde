@@ -759,6 +759,10 @@ input:focus,select:focus,textarea:focus{
   padding:var(--card-padding);
   cursor:grab
 }
+.card.card-panning{
+  cursor:grabbing;
+  user-select:none;
+}
 .card.dragging{opacity:.5}
 .card-top{
   display:flex;

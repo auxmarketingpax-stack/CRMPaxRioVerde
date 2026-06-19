@@ -225,7 +225,8 @@
       planRevenue: null
     },
     pipelineScrollObserver: null,
-    pipelineScrollbarDrag: null
+    pipelineScrollbarDrag: null,
+    pipelineCardPan: null
   };
 
   const PRESET_STAGE_TYPES = [
@@ -2342,6 +2343,62 @@
     }
   }
 
+  function startPipelineCardPan(event) {
+    const card = event.currentTarget;
+    if (!card || event.button !== 0) return;
+    if (event.target.closest("button, input, select, textarea, a, label")) return;
+    if (!els.pipelineScrollArea) return;
+
+    state.pipelineCardPan = {
+      pointerId: event.pointerId,
+      card,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startScrollLeft: els.pipelineScrollArea.scrollLeft,
+      originalDraggable: card.draggable,
+      isPanning: false
+    };
+  }
+
+  function handlePipelineCardPan(event) {
+    const pan = state.pipelineCardPan;
+    if (!pan || pan.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - pan.startClientX;
+    const deltaY = event.clientY - pan.startClientY;
+    const horizontalDistance = Math.abs(deltaX);
+    const verticalDistance = Math.abs(deltaY);
+
+    if (!pan.isPanning) {
+      if (horizontalDistance < 12 || horizontalDistance <= verticalDistance) return;
+      pan.isPanning = true;
+      pan.card.draggable = false;
+      pan.card.classList.add("card-panning");
+      pan.card.setPointerCapture?.(event.pointerId);
+    }
+
+    syncPipelineScrollBars(pan.startScrollLeft - deltaX);
+    event.preventDefault();
+  }
+
+  function stopPipelineCardPan(event) {
+    const pan = state.pipelineCardPan;
+    if (!pan) return;
+    if (event?.pointerId !== undefined && pan.pointerId !== event.pointerId) return;
+
+    if (pan.isPanning) {
+      try {
+        pan.card.releasePointerCapture?.(pan.pointerId);
+      } catch (_error) {
+        // Ignore release failures when capture was already lost.
+      }
+    }
+
+    pan.card.draggable = pan.originalDraggable;
+    pan.card.classList.remove("card-panning");
+    state.pipelineCardPan = null;
+  }
+
   function escapeHtml(value) {
     return String(value || "")
       .replaceAll("&", "&amp;")
@@ -2375,6 +2432,11 @@
 
   function getStageById(id) {
     return state.stages.find((stage) => stage.id === id) || null;
+  }
+
+  function openLeadEditorById(leadId) {
+    const lead = state.leads.find((item) => item.id === leadId);
+    if (lead) openLeadModal(lead);
   }
 
   async function persistStagePositions(stages) {
@@ -4719,8 +4781,30 @@
 
   function bindPipelineEvents() {
     document.querySelectorAll(".card").forEach((card) => {
-      card.ondragstart = () => card.classList.add("dragging");
-      card.ondragend = () => card.classList.remove("dragging");
+      card.ondragstart = (event) => {
+        const pan = state.pipelineCardPan;
+        if (pan?.card === card && pan.isPanning) {
+          event.preventDefault();
+          return false;
+        }
+        state.pipelineCardPan = null;
+        card.classList.add("dragging");
+        return true;
+      };
+      card.ondragend = () => {
+        card.classList.remove("dragging");
+        card.classList.remove("card-panning");
+        card.draggable = true;
+      };
+      card.ondblclick = (event) => {
+        if (event.target.closest(".card-actions")) return;
+        if (state.pipelineCardPan?.isPanning) return;
+        openLeadEditorById(card.dataset.leadId);
+      };
+      card.onpointerdown = startPipelineCardPan;
+      card.onpointermove = handlePipelineCardPan;
+      card.onpointerup = stopPipelineCardPan;
+      card.onpointercancel = stopPipelineCardPan;
     });
 
     document.querySelectorAll(".column").forEach((column) => {
@@ -4745,8 +4829,7 @@
 
     document.querySelectorAll('#view-funil [data-action="edit-lead"]').forEach((btn) => {
       btn.onclick = () => {
-        const lead = state.leads.find((x) => x.id === btn.dataset.id);
-        if (lead) openLeadModal(lead);
+        openLeadEditorById(btn.dataset.id);
       };
     });
 
