@@ -226,7 +226,12 @@
     },
     pipelineScrollObserver: null,
     pipelineScrollbarDrag: null,
-    pipelineCardPan: null
+    pipelineCardPan: null,
+    pipelineCardInteractionsBound: false,
+    pipelineDragAutoScroll: {
+      frameId: null,
+      speed: 0
+    }
   };
 
   const PRESET_STAGE_TYPES = [
@@ -2321,6 +2326,11 @@
     if (!area) return;
 
     area.addEventListener("scroll", () => syncPipelineScrollBars());
+    area.addEventListener("dragover", (event) => {
+      updatePipelineDragAutoScroll(event.clientX);
+    });
+    area.addEventListener("drop", () => stopPipelineDragAutoScroll());
+    area.addEventListener("dragend", () => stopPipelineDragAutoScroll());
     window.addEventListener("resize", () => syncPipelineScrollBars());
     track?.addEventListener("pointerdown", (event) => {
       if (event.target === thumb) return;
@@ -2344,13 +2354,13 @@
   }
 
   function startPipelineCardPan(event) {
-    const card = event.currentTarget;
+    const card = event.target.closest(".card");
     if (!card || event.button !== 0) return;
+    if (!els.pipeline?.contains(card)) return;
     if (event.target.closest("button, input, select, textarea, a, label")) return;
     if (!els.pipelineScrollArea) return;
 
     state.pipelineCardPan = {
-      pointerId: event.pointerId,
       card,
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -2362,7 +2372,7 @@
 
   function handlePipelineCardPan(event) {
     const pan = state.pipelineCardPan;
-    if (!pan || pan.pointerId !== event.pointerId) return;
+    if (!pan) return;
 
     const deltaX = event.clientX - pan.startClientX;
     const deltaY = event.clientY - pan.startClientY;
@@ -2374,7 +2384,6 @@
       pan.isPanning = true;
       pan.card.draggable = false;
       pan.card.classList.add("card-panning");
-      pan.card.setPointerCapture?.(event.pointerId);
     }
 
     syncPipelineScrollBars(pan.startScrollLeft - deltaX);
@@ -2384,19 +2393,94 @@
   function stopPipelineCardPan(event) {
     const pan = state.pipelineCardPan;
     if (!pan) return;
-    if (event?.pointerId !== undefined && pan.pointerId !== event.pointerId) return;
-
-    if (pan.isPanning) {
-      try {
-        pan.card.releasePointerCapture?.(pan.pointerId);
-      } catch (_error) {
-        // Ignore release failures when capture was already lost.
-      }
-    }
 
     pan.card.draggable = pan.originalDraggable;
     pan.card.classList.remove("card-panning");
     state.pipelineCardPan = null;
+  }
+
+  function handlePipelineCardDoubleClick(event) {
+    const card = event.target.closest(".card");
+    if (!card || !els.pipeline?.contains(card)) return;
+    if (event.target.closest(".card-actions")) return;
+    if (state.pipelineCardPan?.isPanning) return;
+    openLeadEditorById(card.dataset.leadId);
+  }
+
+  function attachPipelineCardInteractionEvents() {
+    if (state.pipelineCardInteractionsBound || !els.pipeline) return;
+
+    els.pipeline.addEventListener("mousedown", startPipelineCardPan);
+    els.pipeline.addEventListener("dblclick", handlePipelineCardDoubleClick);
+    document.addEventListener("mousemove", handlePipelineCardPan);
+    document.addEventListener("mouseup", stopPipelineCardPan);
+    window.addEventListener("blur", stopPipelineCardPan);
+
+    state.pipelineCardInteractionsBound = true;
+  }
+
+  function stopPipelineDragAutoScroll() {
+    const autoScroll = state.pipelineDragAutoScroll;
+    if (autoScroll.frameId) {
+      cancelAnimationFrame(autoScroll.frameId);
+      autoScroll.frameId = null;
+    }
+    autoScroll.speed = 0;
+  }
+
+  function stepPipelineDragAutoScroll() {
+    const area = els.pipelineScrollArea;
+    const autoScroll = state.pipelineDragAutoScroll;
+    const draggingCard = document.querySelector(".card.dragging");
+
+    if (!area || !draggingCard || !autoScroll.speed) {
+      stopPipelineDragAutoScroll();
+      return;
+    }
+
+    const previousScrollLeft = area.scrollLeft;
+    const nextScrollLeft = previousScrollLeft + autoScroll.speed;
+    syncPipelineScrollBars(nextScrollLeft);
+
+    if (Math.abs(area.scrollLeft - previousScrollLeft) < 1) {
+      stopPipelineDragAutoScroll();
+      return;
+    }
+
+    autoScroll.frameId = requestAnimationFrame(stepPipelineDragAutoScroll);
+  }
+
+  function updatePipelineDragAutoScroll(clientX) {
+    const area = els.pipelineScrollArea;
+    const draggingCard = document.querySelector(".card.dragging");
+    if (!area || !draggingCard) {
+      stopPipelineDragAutoScroll();
+      return;
+    }
+
+    const rect = area.getBoundingClientRect();
+    const threshold = Math.min(120, Math.max(48, rect.width * 0.18));
+    const maxSpeed = 26;
+    let speed = 0;
+
+    if (clientX <= rect.left + threshold) {
+      const intensity = 1 - ((clientX - rect.left) / threshold);
+      speed = -Math.max(8, Math.round(maxSpeed * intensity));
+    } else if (clientX >= rect.right - threshold) {
+      const intensity = 1 - ((rect.right - clientX) / threshold);
+      speed = Math.max(8, Math.round(maxSpeed * intensity));
+    }
+
+    state.pipelineDragAutoScroll.speed = speed;
+
+    if (!speed) {
+      stopPipelineDragAutoScroll();
+      return;
+    }
+
+    if (!state.pipelineDragAutoScroll.frameId) {
+      state.pipelineDragAutoScroll.frameId = requestAnimationFrame(stepPipelineDragAutoScroll);
+    }
   }
 
   function escapeHtml(value) {
@@ -4795,22 +4879,15 @@
         card.classList.remove("dragging");
         card.classList.remove("card-panning");
         card.draggable = true;
+        stopPipelineDragAutoScroll();
       };
-      card.ondblclick = (event) => {
-        if (event.target.closest(".card-actions")) return;
-        if (state.pipelineCardPan?.isPanning) return;
-        openLeadEditorById(card.dataset.leadId);
-      };
-      card.onpointerdown = startPipelineCardPan;
-      card.onpointermove = handlePipelineCardPan;
-      card.onpointerup = stopPipelineCardPan;
-      card.onpointercancel = stopPipelineCardPan;
     });
 
     document.querySelectorAll(".column").forEach((column) => {
       column.ondragover = (e) => {
         e.preventDefault();
         column.classList.add("drag-over");
+        updatePipelineDragAutoScroll(e.clientX);
       };
 
       column.ondragleave = () => {
@@ -4820,6 +4897,7 @@
       column.ondrop = async (e) => {
         e.preventDefault();
         column.classList.remove("drag-over");
+        stopPipelineDragAutoScroll();
         const dragged = document.querySelector(".card.dragging");
         const leadId = dragged?.dataset?.leadId;
         const stageId = column.dataset.stageId;
@@ -5171,6 +5249,7 @@
     setupPlanListEvents();
     setupObservationListEvents();
     attachPipelineScrollEvents();
+    attachPipelineCardInteractionEvents();
     window.addEventListener("resize", () => {
       if (!isCompactViewport()) setMobileFiltersOpen(false);
       requestAnimationFrame(() => {
