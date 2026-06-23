@@ -3450,6 +3450,43 @@
     `).join("");
   }
 
+  function buildPendingAccessRequests() {
+    const pendingAccessRequests = state.accessRequests
+      .filter((request) => String(request.status || ACCESS_STATUS.PENDING).toLowerCase() === ACCESS_STATUS.PENDING)
+      .map((request) => ({ ...request, _requestSource: "access_request" }));
+
+    const existingKeys = new Set();
+    pendingAccessRequests.forEach((request) => {
+      const authUserId = String(request.auth_user_id || "").trim().toLowerCase();
+      const email = String(request.email || "").trim().toLowerCase();
+      if (authUserId) existingKeys.add(`id:${authUserId}`);
+      if (email) existingKeys.add(`email:${email}`);
+    });
+
+    const pendingProfiles = state.profiles
+      .filter((profile) => String(profile.access_status || ACCESS_STATUS.PENDING).toLowerCase() === ACCESS_STATUS.PENDING)
+      .filter((profile) => {
+        const profileId = String(profile.id || "").trim().toLowerCase();
+        const email = String(profile.email || "").trim().toLowerCase();
+        return !existingKeys.has(`id:${profileId}`) && !existingKeys.has(`email:${email}`);
+      })
+      .map((profile) => ({
+        id: `profile:${profile.id}`,
+        auth_user_id: profile.id,
+        full_name: profile.full_name,
+        email: profile.email,
+        status: ACCESS_STATUS.PENDING,
+        created_at: profile.created_at || null,
+        _requestSource: "profile"
+      }));
+
+    return [...pendingAccessRequests, ...pendingProfiles].sort((left, right) => {
+      const leftTime = left.created_at ? new Date(left.created_at).getTime() : 0;
+      const rightTime = right.created_at ? new Date(right.created_at).getTime() : 0;
+      return rightTime - leftTime;
+    });
+  }
+
   function renderRequests() {
     if (!els.accessRequestsList || !els.adminRequestsList) return;
 
@@ -3459,7 +3496,7 @@
       return;
     }
 
-    const pendingAccessRequests = state.accessRequests.filter((request) => String(request.status || ACCESS_STATUS.PENDING).toLowerCase() === ACCESS_STATUS.PENDING);
+    const pendingAccessRequests = buildPendingAccessRequests();
     const pendingAdminRequests = state.adminRequests.filter((request) => String(request.status || ACCESS_STATUS.PENDING).toLowerCase() === ACCESS_STATUS.PENDING);
 
     const accessCards = pendingAccessRequests.length
@@ -4204,8 +4241,65 @@
     alert("Usuario excluido com sucesso.");
   }
 
+  async function updateSyntheticAccessRequest(profile, payload) {
+    if (!profile) return;
+
+    const updatePayload = { ...payload };
+    const filters = [];
+    if (profile.id) filters.push({ column: "auth_user_id", value: profile.id });
+    if (profile.email) filters.push({ column: "email", value: profile.email });
+
+    for (const filter of filters) {
+      const { error } = await state.supabase
+        .from("access_requests")
+        .update(updatePayload)
+        .eq(filter.column, filter.value);
+
+      if (error && !isMissingRelationError(error)) {
+        console.error("Erro ao sincronizar access_requests:", error);
+        break;
+      }
+    }
+  }
+
   async function approveAccessRequest(requestId, role) {
     if (!canManageAdminAreas()) return;
+
+    if (String(requestId || "").startsWith("profile:")) {
+      const profileId = String(requestId).slice("profile:".length);
+      const profile = state.profiles.find((item) => item.id === profileId);
+      if (!profile) return;
+
+      const approvedRole = String(role || USER_ROLE.USER).toLowerCase() === USER_ROLE.ADMIN
+        ? USER_ROLE.ADMIN
+        : USER_ROLE.USER;
+
+      const { error: profileError } = await state.supabase
+        .from("profiles")
+        .update({
+          access_status: ACCESS_STATUS.APPROVED,
+          role: approvedRole,
+          approved_at: new Date().toISOString(),
+          approved_by: state.currentUser.id
+        })
+        .eq("id", profileId);
+
+      if (profileError) {
+        alert(`Erro ao aprovar acesso: ${profileError.message}`);
+        return;
+      }
+
+      await updateSyntheticAccessRequest(profile, {
+        status: ACCESS_STATUS.APPROVED,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: state.currentUser.id,
+        approved_role: approvedRole
+      });
+
+      await loadAppData({ includeProfiles: true });
+      return;
+    }
+
     const request = state.accessRequests.find((item) => item.id === requestId);
     if (!request) return;
 
@@ -4253,6 +4347,36 @@
 
   async function rejectAccessRequest(requestId) {
     if (!canManageAdminAreas()) return;
+
+    if (String(requestId || "").startsWith("profile:")) {
+      const profileId = String(requestId).slice("profile:".length);
+      const profile = state.profiles.find((item) => item.id === profileId);
+      if (!profile) return;
+
+      const { error: profileError } = await state.supabase
+        .from("profiles")
+        .update({
+          access_status: ACCESS_STATUS.REJECTED,
+          approved_by: state.currentUser.id,
+          denied_at: new Date().toISOString()
+        })
+        .eq("id", profileId);
+
+      if (profileError) {
+        alert(`Erro ao recusar acesso: ${profileError.message}`);
+        return;
+      }
+
+      await updateSyntheticAccessRequest(profile, {
+        status: ACCESS_STATUS.REJECTED,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: state.currentUser.id
+      });
+
+      await loadAppData({ includeProfiles: true });
+      return;
+    }
+
     const request = state.accessRequests.find((item) => item.id === requestId);
     if (!request) return;
 

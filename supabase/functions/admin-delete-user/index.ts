@@ -113,8 +113,14 @@ Deno.serve(async (request) => {
       adminClient.from("leads").update({ assigned_to: null }).eq("assigned_to", targetId),
       adminClient.from("leads").update({ created_by: null }).eq("created_by", targetId),
       adminClient.from("stages").update({ created_by: null }).eq("created_by", targetId),
+      adminClient.from("profiles").update({ approved_by: null }).eq("approved_by", targetId),
+      adminClient.from("access_requests").update({ reviewed_by: null }).eq("reviewed_by", targetId),
+      adminClient.from("admin_requests").update({ reviewed_by: null }).eq("reviewed_by", targetId),
       adminClient.from("admin_requests").delete().eq("requested_by_id", targetId),
       adminClient.from("access_requests").delete().eq("auth_user_id", targetId),
+      targetProfile.email
+        ? adminClient.from("access_requests").delete().eq("email", targetProfile.email)
+        : Promise.resolve({ error: null }),
       adminClient.from("change_history").delete().eq("user_id", targetId)
     ]);
 
