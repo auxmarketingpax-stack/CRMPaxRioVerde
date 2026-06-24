@@ -459,9 +459,9 @@
       return "Novas solicitacoes publicas estao desativadas. Solicite a liberacao diretamente a um administrador.";
     }
     if (!state.security.allowedSignupEmailDomains.length) {
-      return "O acesso depende de aprovacao do administrador. Sua solicitacao fica pendente ate a liberacao.";
+      return "Depois de enviar um cadastro valido, o acesso ainda depende de aprovacao do administrador.";
     }
-    return `Solicitacoes aceitas apenas para e-mails de: ${state.security.allowedSignupEmailDomains.join(", ")}.`;
+    return `Cadastros validos sao aceitos apenas para e-mails de: ${state.security.allowedSignupEmailDomains.join(", ")}. Depois do envio, o acesso fica pendente ate a aprovacao do administrador.`;
   }
 
   function applySecurityConfigToUi() {
@@ -486,9 +486,71 @@
     el.style.color = isError ? "#fecaca" : "#cdecd6";
   }
 
+  function formatNaturalLanguageList(values = []) {
+    const items = (Array.isArray(values) ? values : [])
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+
+    if (!items.length) return "";
+    if (items.length === 1) return items[0];
+    if (items.length === 2) return `${items[0]} e ${items[1]}`;
+    return `${items.slice(0, -1).join(", ")} e ${items[items.length - 1]}`;
+  }
+
+  function getPasswordRuleErrorMessage(error) {
+    const rawMessage = String(error?.message || "");
+    const message = rawMessage.toLowerCase();
+    if (!message.includes("password")) return "";
+
+    const minLengthMatch = message.match(/at least\s+(\d+)\s+characters?/);
+    if (minLengthMatch) {
+      return `A senha deve ter pelo menos ${minLengthMatch[1]} caracteres.`;
+    }
+
+    if (message.includes("at least one character of each")) {
+      const requirements = [];
+      if (rawMessage.includes("abc")) requirements.push("uma letra minuscula");
+      if (rawMessage.includes("ABC")) requirements.push("uma letra maiuscula");
+      if (rawMessage.includes("123")) requirements.push("um numero");
+      if (
+        rawMessage.includes("!@#$") ||
+        rawMessage.includes("@#$%") ||
+        rawMessage.includes("^&*") ||
+        message.includes("special character")
+      ) {
+        requirements.push("um caractere especial");
+      }
+
+      if (requirements.length) {
+        return `A senha precisa conter ${formatNaturalLanguageList(requirements)}.`;
+      }
+      return "A senha nao atende aos requisitos minimos de seguranca.";
+    }
+
+    if (message.includes("too short")) {
+      return "A senha esta muito curta.";
+    }
+
+    if (message.includes("weak password")) {
+      return "A senha nao atende aos requisitos minimos de seguranca.";
+    }
+
+    const maxLengthMatch = message.match(/(?:no more than|at most)\s+(\d+)\s+characters?/);
+    if (maxLengthMatch) {
+      return `A senha deve ter no maximo ${maxLengthMatch[1]} caracteres.`;
+    }
+
+    return "";
+  }
+
   function getAuthErrorMessage(error, fallback = "Nao foi possivel concluir a autenticacao.") {
     const code = String(error?.code || "").toLowerCase();
     const message = String(error?.message || "").toLowerCase();
+    const passwordRuleMessage = getPasswordRuleErrorMessage(error);
+
+    if (passwordRuleMessage) {
+      return passwordRuleMessage;
+    }
 
     if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
       return "Seu e-mail ainda nao foi confirmado. Verifique a caixa de entrada antes de entrar.";
@@ -599,6 +661,20 @@
 
   function canManageLeadSources() {
     return isAdmin();
+  }
+
+  function getCurrentLeadOwnerName() {
+    return normalizeSpacing(getUserDisplayName());
+  }
+
+  function resolveLeadOwnerForPersistence({ existingLead = null, requestedOwner = "" } = {}) {
+    if (canAssignLeadOwner()) {
+      return getCanonicalMappedValue(requestedOwner, state.ownerCanonicalMap, "owner");
+    }
+    if (existingLead) {
+      return normalizeSpacing(existingLead.owner);
+    }
+    return getCurrentLeadOwnerName();
   }
 
   function isUuid(value) {
@@ -3953,8 +4029,8 @@
         const name = row.nome || row.name || "";
         const contact = row.contato || row.contact || "";
         const owner = canAssignLeadOwner()
-          ? (row.responsavel || row.vendedor || row.owner || getUserDisplayName())
-          : getUserDisplayName();
+          ? (row.responsavel || row.vendedor || row.owner || getCurrentLeadOwnerName())
+          : getCurrentLeadOwnerName();
         const startDate = row.data_inicio || row.start_date || row.data || "";
         const normalizedStartDate = normalizeDateInput(startDate) || null;
         const trafficType = row.origem || row.traffic_type || getLeadSourceNames()[0] || "Organico";
@@ -3981,7 +4057,7 @@
           created_by: state.currentUser?.id || null,
           name: String(name).trim(),
           contact: String(contact).trim(),
-          owner: getCanonicalMappedValue(owner, state.ownerCanonicalMap, "owner"),
+          owner: resolveLeadOwnerForPersistence({ requestedOwner: owner }),
           value: importedValue,
           start_date: normalizedStartDate,
           social_source: getCanonicalMappedValue(row.rede_social || row.social_source || "", state.socialSourceCanonicalMap, "social_source"),
@@ -4595,9 +4671,10 @@
     })));
     const leadValue = getPlansTotalValue(draftPlans);
     const draftObservations = cleanObservationList(state.modalObservations);
-    const resolvedOwner = canAssignLeadOwner()
-      ? els.owner.value.trim()
-      : (existingLead?.owner || getUserDisplayName());
+    const resolvedOwner = resolveLeadOwnerForPersistence({
+      existingLead,
+      requestedOwner: els.owner.value.trim()
+    });
 
     const invalidPlan = normalizedModalPlans.find((item) => item.name && !isNoPlanName(item.name) && String(item?.value ?? "").trim() === "");
     if (existingLead && invalidPlan) return alert("Ao adicionar um plano, informe tambem o valor.");
@@ -4620,7 +4697,7 @@
       stage_id: els.stage.value,
       name: els.name.value.trim(),
       contact: els.contact.value.trim(),
-      owner: getCanonicalMappedValue(resolvedOwner, state.ownerCanonicalMap, "owner"),
+      owner: resolvedOwner,
       value: Number.isFinite(leadValue) ? leadValue : 0,
       start_date: normalizeDateInput(els.startDate.value) || els.startDate.value,
       social_source: getCanonicalMappedValue(els.socialSource.value.trim(), state.socialSourceCanonicalMap, "social_source"),
@@ -4638,7 +4715,8 @@
     };
 
     if (!payload.stage_id) return alert("Selecione uma etapa.");
-    if (!payload.name || !payload.contact || !payload.owner || !payload.start_date || !payload.traffic_type) {
+    const requiresOwner = canAssignLeadOwner() || !existingLead;
+    if (!payload.name || !payload.contact || !payload.start_date || !payload.traffic_type || (requiresOwner && !payload.owner)) {
       return alert("Preencha os campos obrigatorios.");
     }
     if (isReferralLeadSource(payload.traffic_type) && !referralName) {
@@ -4921,7 +4999,7 @@
     }
 
     const { error } = await state.supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) return setMessage(els.authMessage, error.message, true);
+    if (error) return setMessage(els.authMessage, getAuthErrorMessage(error, "Nao foi possivel enviar o link de recuperacao."), true);
 
     setMessage(els.authMessage, "Enviamos o link de recuperação. Verifique seu e-mail.");
   }
@@ -4931,7 +5009,7 @@
     if (!newPassword) return setMessage(els.authMessage, "Digite a nova senha.", true);
 
     const { error } = await state.supabase.auth.updateUser({ password: newPassword });
-    if (error) return setMessage(els.authMessage, error.message, true);
+    if (error) return setMessage(els.authMessage, getAuthErrorMessage(error, "Nao foi possivel atualizar a senha."), true);
 
     $("newPassword").value = "";
     clearAuthRedirectState();
