@@ -95,6 +95,12 @@
           </select>
         </div>
         <div class="form-group">
+          <label for="mobileStageFilter">Pipeline</label>
+          <select id="mobileStageFilter">
+            <option value="">Todos os pipelines</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="mobileLeadSourceFilter">Origem do Lead</label>
           <select id="mobileLeadSourceFilter">
             <option value="">Todas as origens</option>
@@ -198,6 +204,17 @@
                 <div class="filter-menu hidden" id="monthFilterMenu" role="listbox" aria-label="Filtro de meses"></div>
                 <select id="monthFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
                   <option value="">Todos os meses</option>
+                </select>
+              </div>
+
+              <div class="filter-dropdown" id="stageFilterDropdown">
+                <button type="button" class="filter-btn" id="stageFilterBtn" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="filter-btn-label" id="stageFilterLabel">Todos os pipelines</span>
+                  <span class="filter-btn-arrow">&#9662;</span>
+                </button>
+                <div class="filter-menu hidden" id="stageFilterMenu" role="listbox" aria-label="Filtro de pipeline"></div>
+                <select id="stageFilter" class="hidden-native-filter" aria-hidden="true" tabindex="-1">
+                  <option value="">Todos os pipelines</option>
                 </select>
               </div>
 
