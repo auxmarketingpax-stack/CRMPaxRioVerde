@@ -1429,7 +1429,10 @@ input:focus,select:focus,textarea:focus{
     padding-bottom:0;
   }
   .funil-sticky-head{
-    display:none;
+    display:block;
+    position:sticky;
+    top:var(--mobile-topbar-height);
+    z-index:34;
   }
   .stats,.report-grid,.form-grid,.charts-grid{grid-template-columns:1fr}
   .topbar-actions input,.topbar-actions .filter-dropdown,.topbar-actions button{width:100%}
