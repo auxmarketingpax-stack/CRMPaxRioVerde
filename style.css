@@ -714,6 +714,65 @@ input:focus,select:focus,textarea:focus{
 .stats-extended .stat-card{
   background:#0f1f17;
 }
+.pipeline-stage-strip-wrap{
+  margin-top:10px;
+  overflow:hidden;
+  width:100%;
+  max-width:100%;
+}
+.pipeline-stage-strip{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(var(--pipeline-column-width), var(--pipeline-column-width));
+  gap:var(--pipeline-gap);
+  width:max-content;
+  min-width:max-content;
+  will-change:transform;
+}
+.pipeline-stage-tab{
+  min-height:86px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:flex-start;
+  padding:14px 16px;
+  border-radius:18px;
+  background:rgba(15,31,23,.96);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow);
+}
+.pipeline-stage-tab-title{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  min-width:0;
+}
+.pipeline-stage-tab-title strong{
+  display:block;
+  font-size:15px;
+  line-height:1.2;
+  margin-bottom:4px;
+  overflow-wrap:anywhere;
+}
+.pipeline-stage-tab-title span{
+  color:var(--muted);
+  font-size:12px;
+}
+.pipeline-stage-tab-accent{
+  width:8px;
+  min-width:8px;
+  height:42px;
+  border-radius:999px;
+  box-shadow:0 0 18px rgba(52,211,153,.18);
+}
+.pipeline-stage-tab-badge{
+  background:rgba(31,157,85,.18);
+  color:#9ef0be;
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:800;
+}
 .stat-card,.report-card,.panel{
   background:rgba(15,31,23,.88);
   border:1px solid var(--border);
@@ -756,12 +815,7 @@ input:focus,select:focus,textarea:focus{
   grid-template-columns:minmax(0,1fr) auto;
   gap:12px;
   align-items:flex-start;
-  min-height:132px;
-  position:sticky;
-  top:calc(var(--metrics-sticky-offset) + var(--funil-sticky-height) + 8px);
-  z-index:12;
-  background:rgba(15,31,23,.98);
-  backdrop-filter:blur(12px)
+  min-height:132px
 }
 .column-title h3{
   font-size:var(--column-title-size);
@@ -1231,11 +1285,6 @@ input:focus,select:focus,textarea:focus{
   .mobile-topbar{display:flex}
   .mobile-nav{display:none}
   .stats,.report-grid{grid-template-columns:repeat(2,1fr)}
-  .column-header{
-    position:static;
-    top:auto;
-    backdrop-filter:none;
-  }
 }
 
 @media(min-width:701px) and (max-width:1100px){
