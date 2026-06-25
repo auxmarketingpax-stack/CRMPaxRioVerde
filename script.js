@@ -86,6 +86,7 @@
     historyBtn: $("historyBtn"),
 
     pipelineScrollArea: $("pipelineScrollArea"),
+    pipelineStageStrip: $("pipelineStageStrip"),
     pipelineScrollTop: $("pipelineScrollTop"),
     pipelineScrollTopTrack: $("pipelineScrollTopTrack"),
     pipelineScrollTopThumb: $("pipelineScrollTopThumb"),
@@ -2368,6 +2369,7 @@
     let metrics = getPipelineScrollMetrics();
     const area = metrics.area;
     const top = metrics.top;
+    const stageStrip = els.pipelineStageStrip;
 
     if (top) top.style.display = metrics.shouldShowTop ? "flex" : "none";
     if (!area) return;
@@ -2380,6 +2382,11 @@
     // Re-read metrics after making the bar visible so the thumb can be sized.
     if (metrics.shouldShowTop && !metrics.trackWidth) {
       metrics = getPipelineScrollMetrics();
+    }
+
+    if (stageStrip) {
+      const scrollLeft = Math.min(metrics.maxScrollLeft, Math.max(0, area?.scrollLeft || 0));
+      stageStrip.style.transform = `translateX(${-scrollLeft}px)`;
     }
 
     updatePipelineScrollThumb(metrics);
@@ -3235,8 +3242,29 @@
     }
   }
 
+  function renderPipelineStageStrip(filtered = getFilteredLeads()) {
+    if (!els.pipelineStageStrip) return;
+
+    els.pipelineStageStrip.innerHTML = state.stages.map((stage) => {
+      const count = filtered.filter((lead) => lead.stage_id === stage.id).length;
+      return `
+        <article class="pipeline-stage-tab">
+          <div class="pipeline-stage-tab-title">
+            <span class="pipeline-stage-tab-accent" style="background:${stage.color}"></span>
+            <div>
+              <strong>${escapeHtml(stage.name)}</strong>
+              <span>${escapeHtml(stageTypeLabel(stage.stage_type, stage.custom_stage_type))}</span>
+            </div>
+          </div>
+          <span class="pipeline-stage-tab-badge">${count}</span>
+        </article>
+      `;
+    }).join("");
+  }
+
   function renderPipeline() {
     const filtered = getFilteredLeads();
+    renderPipelineStageStrip(filtered);
 
     els.pipeline.innerHTML = state.stages.map((stage, index) => {
       const leads = filtered.filter((lead) => lead.stage_id === stage.id);
