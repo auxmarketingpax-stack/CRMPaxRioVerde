@@ -1440,7 +1440,7 @@ input:focus,select:focus,textarea:focus{
   .funil-sticky-head{
     display:block;
     position:sticky;
-    top:var(--mobile-topbar-height);
+    top:var(--metrics-sticky-offset);
     z-index:34;
   }
   .stats,.report-grid,.form-grid,.charts-grid{grid-template-columns:1fr}
