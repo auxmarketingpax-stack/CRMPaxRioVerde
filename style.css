@@ -807,7 +807,8 @@ input:focus,select:focus,textarea:focus{
   align-items:stretch;
   width:max-content;
   min-width:max-content;
-  padding-bottom:6px
+  padding-bottom:6px;
+  padding-top:var(--pipeline-connector-overlap)
 }
 .column{
   width:var(--pipeline-column-width);
@@ -817,6 +818,7 @@ input:focus,select:focus,textarea:focus{
   border-radius:var(--radius);
   border-top-left-radius:0;
   border-top-right-radius:0;
+  margin-top:calc(var(--pipeline-connector-overlap) * -1);
   min-height:520px;
   height:100%;
   display:flex;
@@ -901,7 +903,6 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   min-width:0;
-  margin-top:calc(var(--pipeline-connector-overlap) * -1);
   padding-bottom:0;
   position:relative;
   z-index:1;
