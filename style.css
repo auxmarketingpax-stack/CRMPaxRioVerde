@@ -717,8 +717,6 @@ input:focus,select:focus,textarea:focus{
 }
 .pipeline-stage-strip-wrap{
   margin-top:10px;
-  padding-bottom:var(--pipeline-connector-overlap);
-  margin-bottom:calc(var(--pipeline-connector-overlap) * -1);
   overflow:hidden;
   width:100%;
   max-width:100%;
@@ -741,11 +739,23 @@ input:focus,select:focus,textarea:focus{
   grid-template-columns:minmax(0,1fr) auto;
   gap:12px;
   align-items:flex-start;
-  padding:14px 16px calc(14px + var(--pipeline-connector-overlap));
+  padding:14px 16px;
   border-radius:18px 18px 0 0;
   background:rgba(15,31,23,.96);
   border:1px solid var(--border);
   box-shadow:var(--shadow);
+  position:relative;
+}
+.pipeline-stage-tab::after{
+  content:"";
+  position:absolute;
+  left:-1px;
+  right:-1px;
+  bottom:calc(var(--pipeline-connector-overlap) * -1);
+  height:var(--pipeline-connector-overlap);
+  background:rgba(15,31,23,.85);
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
 }
 .pipeline-stage-tab-main{
   min-width:0;
