@@ -849,7 +849,7 @@ input:focus,select:focus,textarea:focus{
   font-weight:700
 }
 .column-body{
-  padding:var(--column-body-padding);
+  padding:0 var(--column-body-padding) var(--column-body-padding);
   display:flex;
   flex-direction:column;
   flex:1 1 auto;
