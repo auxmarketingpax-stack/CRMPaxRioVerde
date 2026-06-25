@@ -741,11 +741,17 @@ input:focus,select:focus,textarea:focus{
   border:1px solid var(--border);
   box-shadow:var(--shadow);
 }
+.pipeline-stage-tab-main{
+  min-width:0;
+}
 .pipeline-stage-tab-title{
   display:flex;
   align-items:flex-start;
   gap:12px;
   min-width:0;
+}
+.pipeline-stage-tab-actions{
+  margin-top:12px;
 }
 .pipeline-stage-tab-title strong{
   display:block;

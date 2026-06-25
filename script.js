@@ -3245,16 +3245,24 @@
   function renderPipelineStageStrip(filtered = getFilteredLeads()) {
     if (!els.pipelineStageStrip) return;
 
-    els.pipelineStageStrip.innerHTML = state.stages.map((stage) => {
+    els.pipelineStageStrip.innerHTML = state.stages.map((stage, index) => {
       const count = filtered.filter((lead) => lead.stage_id === stage.id).length;
       return `
         <article class="pipeline-stage-tab">
-          <div class="pipeline-stage-tab-title">
-            <span class="pipeline-stage-tab-accent" style="background:${stage.color}"></span>
-            <div>
-              <strong>${escapeHtml(stage.name)}</strong>
-              <span>${escapeHtml(stageTypeLabel(stage.stage_type, stage.custom_stage_type))}</span>
+          <div class="pipeline-stage-tab-main">
+            <div class="pipeline-stage-tab-title">
+              <span class="pipeline-stage-tab-accent" style="background:${stage.color}"></span>
+              <div>
+                <strong>${escapeHtml(stage.name)}</strong>
+                <span>${escapeHtml(stageTypeLabel(stage.stage_type, stage.custom_stage_type))}</span>
+              </div>
             </div>
+            ${canManageStages() ? `
+              <div class="column-order-actions pipeline-stage-tab-actions">
+                <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">&larr;</button>
+                <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">&rarr;</button>
+              </div>
+            ` : ""}
           </div>
           <span class="pipeline-stage-tab-badge">${count}</span>
         </article>
@@ -3305,24 +3313,6 @@
 
       return `
         <section class="column" data-stage-id="${stage.id}">
-          <header class="column-header">
-            <div class="column-title-wrap">
-              <div class="column-title">
-                <div class="column-accent" style="background:${stage.color}"></div>
-                <div>
-                  <h3>${escapeHtml(stage.name)}</h3>
-                  <span>${escapeHtml(stageTypeLabel(stage.stage_type, stage.custom_stage_type))}</span>
-                </div>
-              </div>
-              ${canManageStages() ? `
-                <div class="column-order-actions">
-                  <button type="button" class="icon-btn" data-stage-action="move-left" data-id="${stage.id}" ${index === 0 ? "disabled" : ""} title="Mover para a esquerda">&larr;</button>
-                  <button type="button" class="icon-btn" data-stage-action="move-right" data-id="${stage.id}" ${index === state.stages.length - 1 ? "disabled" : ""} title="Mover para a direita">&rarr;</button>
-                </div>
-              ` : ""}
-            </div>
-            <span class="badge">${leads.length}</span>
-          </header>
           <div class="column-body">${cards}</div>
         </section>
       `;
