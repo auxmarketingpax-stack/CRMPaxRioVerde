@@ -677,6 +677,13 @@
     return getCurrentLeadOwnerName();
   }
 
+  function resolveLeadAssigneeForPersistence(existingLead = null) {
+    if (existingLead) {
+      return existingLead.assigned_to || null;
+    }
+    return state.currentUser?.id || null;
+  }
+
   function isUuid(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
   }
@@ -4692,7 +4699,7 @@
     }
 
     const payload = {
-      assigned_to: state.currentUser.id,
+      assigned_to: resolveLeadAssigneeForPersistence(existingLead),
       created_by: existingLead?.created_by || state.currentUser.id,
       stage_id: els.stage.value,
       name: els.name.value.trim(),
