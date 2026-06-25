@@ -2370,6 +2370,7 @@
     const area = metrics.area;
     const top = metrics.top;
     const stageStrip = els.pipelineStageStrip;
+    const stageStripWrap = stageStrip?.parentElement;
 
     if (top) top.style.display = metrics.shouldShowTop ? "flex" : "none";
     if (!area) return;
@@ -2384,9 +2385,9 @@
       metrics = getPipelineScrollMetrics();
     }
 
-    if (stageStrip) {
+    if (stageStripWrap) {
       const scrollLeft = Math.min(metrics.maxScrollLeft, Math.max(0, area?.scrollLeft || 0));
-      stageStrip.style.transform = `translateX(${-scrollLeft}px)`;
+      stageStripWrap.scrollLeft = scrollLeft;
     }
 
     updatePipelineScrollThumb(metrics);
