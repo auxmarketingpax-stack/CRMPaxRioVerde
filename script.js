@@ -2472,7 +2472,10 @@
     });
     area.addEventListener("drop", () => stopPipelineDragAutoScroll());
     area.addEventListener("dragend", () => stopPipelineDragAutoScroll());
-    window.addEventListener("resize", () => syncPipelineScrollBars());
+    window.addEventListener("resize", () => {
+      syncPipelineColumnHeights();
+      syncPipelineScrollBars();
+    });
     track?.addEventListener("pointerdown", (event) => {
       if (event.target === thumb) return;
       if (event.button !== 0) return;
@@ -3270,6 +3273,26 @@
     }).join("");
   }
 
+  function syncPipelineColumnHeights() {
+    const columns = [...document.querySelectorAll("#pipeline .column")];
+    if (!columns.length) return;
+
+    columns.forEach((column) => {
+      column.style.height = "";
+      column.style.minHeight = "";
+    });
+
+    if (isCompactViewport()) return;
+
+    const tallestHeight = Math.max(...columns.map((column) => Math.ceil(column.getBoundingClientRect().height || 0)));
+    if (!tallestHeight) return;
+
+    columns.forEach((column) => {
+      column.style.height = `${tallestHeight}px`;
+      column.style.minHeight = `${tallestHeight}px`;
+    });
+  }
+
   function renderPipeline() {
     const filtered = getFilteredLeads();
     renderPipelineStageStrip(filtered);
@@ -3320,6 +3343,7 @@
 
     bindPipelineEvents();
     requestAnimationFrame(() => {
+      syncPipelineColumnHeights();
       syncPipelineScrollBars();
       updateStickyLayout();
     });
@@ -5627,6 +5651,7 @@
     window.addEventListener("resize", () => {
       if (!isCompactViewport()) setMobileFiltersOpen(false);
       requestAnimationFrame(() => {
+        syncPipelineColumnHeights();
         updateStickyLayout();
         syncPipelineScrollBars();
       });

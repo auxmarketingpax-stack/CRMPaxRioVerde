@@ -1271,8 +1271,13 @@ input:focus,select:focus,textarea:focus{
   .mobile-only{display:inline-flex!important}
   .app{grid-template-columns:1fr}
   .funil-sticky-head{
-    display:none;
+    display:block;
+    top:var(--metrics-sticky-offset);
+    padding-top:6px;
+    padding-bottom:6px;
   }
+  #metricsSection{display:none}
+  .pipeline-stage-strip-wrap{margin-top:0}
   .sidebar{
     display:none;
     position:fixed;
@@ -1293,9 +1298,6 @@ input:focus,select:focus,textarea:focus{
   .mobile-topbar{display:flex}
   .mobile-nav{display:none}
   .stats,.report-grid{grid-template-columns:repeat(2,1fr)}
-  .pipeline{align-items:start}
-  .column{height:auto}
-  .column-body{flex:initial}
 }
 
 @media(min-width:701px) and (max-width:1100px){
