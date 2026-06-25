@@ -799,7 +799,7 @@ input:focus,select:focus,textarea:focus{
   grid-auto-flow:column;
   grid-auto-columns:minmax(var(--pipeline-column-width), var(--pipeline-column-width));
   gap:var(--pipeline-gap);
-  align-items:start;
+  align-items:stretch;
   width:max-content;
   min-width:max-content;
   padding-bottom:6px
@@ -810,6 +810,7 @@ input:focus,select:focus,textarea:focus{
   border:1px solid var(--border);
   border-radius:var(--radius);
   min-height:520px;
+  height:100%;
   display:flex;
   flex-direction:column;
   box-shadow:var(--shadow)
@@ -842,6 +843,7 @@ input:focus,select:focus,textarea:focus{
   padding:var(--column-body-padding);
   display:flex;
   flex-direction:column;
+  flex:1 1 auto;
   gap:12px;
   min-height:420px
 }
@@ -1291,6 +1293,9 @@ input:focus,select:focus,textarea:focus{
   .mobile-topbar{display:flex}
   .mobile-nav{display:none}
   .stats,.report-grid{grid-template-columns:repeat(2,1fr)}
+  .pipeline{align-items:start}
+  .column{height:auto}
+  .column-body{flex:initial}
 }
 
 @media(min-width:701px) and (max-width:1100px){
