@@ -1314,6 +1314,10 @@ input:focus,select:focus,textarea:focus{
   .topbar p{
     font-size:12px;
   }
+  #desktopFiltersBtn,
+  #addLeadBtn{
+    display:none!important;
+  }
   .desktop-filters-panel{
     width:min(640px, calc(100vw - 32px));
     right:0;
@@ -1537,6 +1541,11 @@ input:focus,select:focus,textarea:focus{
   }
 
   .pipeline {
+    grid-auto-columns: minmax(86vw, 86vw);
+    gap: 12px;
+  }
+
+  .pipeline-stage-strip {
     grid-auto-columns: minmax(86vw, 86vw);
     gap: 12px;
   }
@@ -1981,6 +1990,7 @@ input[type="color"]::-moz-color-swatch {
   .topbar p{font-size:13px;}
   .column{width:84vw; min-height:unset;}
   .pipeline{grid-auto-columns:84vw; gap:12px;}
+  .pipeline-stage-strip{grid-auto-columns:84vw; gap:12px;}
   .column-header{padding:12px;}
   .column-body{padding:12px;}
   .plan-item-grid{grid-template-columns:1fr;}
