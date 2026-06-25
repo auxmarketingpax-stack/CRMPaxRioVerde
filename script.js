@@ -1087,6 +1087,29 @@
       .filter((item) => item.text);
   }
 
+  function markPersistedObservations(observations) {
+    return cleanObservationList(observations).map((item) => ({
+      ...item,
+      _persisted: true,
+      _originalDate: item.date || "",
+      _originalText: item.text || ""
+    }));
+  }
+
+  function buildObservationRequestPayload(lead, observation) {
+    return {
+      lead_id: lead?.id || null,
+      lead_name: lead?.name || "",
+      observation_date: observation?._originalDate || observation?.date || "",
+      observation_text: observation?._originalText || observation?.text || ""
+    };
+  }
+
+  function isSameObservationItem(left, right) {
+    return normalizeDateInput(left?.date || "") === normalizeDateInput(right?.date || "")
+      && String(left?.text || "").trim() === String(right?.text || "").trim();
+  }
+
   function cleanPlanList(plans) {
     return (Array.isArray(plans) ? plans : [])
       .map((item) => {
@@ -2237,7 +2260,7 @@
   }
 
   function addObservationFromDraft() {
-    state.modalObservations.push({ date: "", text: "" });
+    state.modalObservations.push({ date: "", text: "", _persisted: false, _originalDate: "", _originalText: "" });
     renderObservationItems();
   }
 
@@ -2260,7 +2283,22 @@
       if (!button) return;
       const item = button.closest(".observation-item");
       const index = Number(item?.dataset.index);
-      if (Number.isNaN(index)) return;
+      if (Number.isNaN(index) || !state.modalObservations[index]) return;
+      const observation = state.modalObservations[index];
+      const existingLead = state.leads.find((lead) => lead.id === els.leadId.value) || null;
+
+      if (existingLead && !canDeleteLeads() && observation._persisted) {
+        requestAdminAuthorization({
+          requestType: "delete_observation",
+          title: "Solicitar exclusao de observacao",
+          description: `Voce nao tem permissao para excluir uma observacao do lead "${existingLead.name}". Sua solicitacao sera enviada para o administrador.`,
+          entityType: "lead",
+          entityId: existingLead.id,
+          payload: buildObservationRequestPayload(existingLead, observation)
+        });
+        return;
+      }
+
       state.modalObservations.splice(index, 1);
       renderObservationItems();
     });
@@ -4170,7 +4208,7 @@
     } else if (lead && !state.modalPlans.length) {
       state.modalPlans = [{ name: "Sem plano", value: 0 }];
     }
-    state.modalObservations = getLeadObservations(lead);
+    state.modalObservations = markPersistedObservations(getLeadObservations(lead));
     renderPlanItems();
     syncLeadPlanSection();
     renderObservationItems();
@@ -4497,6 +4535,52 @@
     await loadAppData({ includeProfiles: true });
   }
 
+  async function deleteObservationFromLead(payload = {}) {
+    const leadId = String(payload.lead_id || "").trim();
+    if (!leadId) return null;
+
+    const lead = state.leads.find((item) => item.id === leadId);
+    if (!lead) throw new Error("Lead da observacao nao encontrado.");
+
+    const leadMeta = getLeadMeta(lead?.notes || "", lead?.value || 0);
+    const observations = cleanObservationList(leadMeta.observations || []);
+    const target = {
+      date: normalizeDateInput(payload.observation_date || ""),
+      text: String(payload.observation_text || "").trim()
+    };
+    const targetIndex = observations.findIndex((item) => isSameObservationItem(item, target));
+
+    if (targetIndex < 0) return lead;
+
+    observations.splice(targetIndex, 1);
+
+    const { error } = await state.supabase
+      .from("leads")
+      .update({
+        notes: serializeLeadMeta({
+          ...leadMeta,
+          observations
+        })
+      })
+      .eq("id", leadId);
+
+    if (error) throw error;
+
+    await logChange(
+      "delete_observation",
+      "lead",
+      leadId,
+      `Uma observacao do lead "${lead.name}" foi excluida por ${getUserDisplayName()} apos aprovacao administrativa.`,
+      {
+        lead_id: leadId,
+        lead_name: lead.name,
+        removed_observation: target
+      }
+    );
+
+    return lead;
+  }
+
   async function resolveAdminRequest(requestId, action) {
     if (!canManageAdminAreas()) return;
     const request = state.adminRequests.find((item) => item.id === requestId);
@@ -4515,6 +4599,15 @@
         const { error: deleteError } = await deleteLeadsByIds(request.payload.lead_ids);
         if (deleteError) {
           alert(`Erro ao excluir leads aprovados: ${formatSupabaseError(deleteError)}`);
+          return;
+        }
+      }
+
+      if (request.request_type === "delete_observation") {
+        try {
+          await deleteObservationFromLead(request.payload || {});
+        } catch (deleteError) {
+          alert(`Erro ao excluir observacao aprovada: ${formatSupabaseError(deleteError)}`);
           return;
         }
       }
