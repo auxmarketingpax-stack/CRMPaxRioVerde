@@ -36,6 +36,7 @@
   --stat-value-size:28px;
   --pipeline-column-width:300px;
   --pipeline-gap:18px;
+  --pipeline-connector-overlap:14px;
   --column-header-padding:16px;
   --column-body-padding:14px;
   --column-title-size:16px;
@@ -716,10 +717,13 @@ input:focus,select:focus,textarea:focus{
 }
 .pipeline-stage-strip-wrap{
   margin-top:10px;
+  padding-bottom:var(--pipeline-connector-overlap);
   overflow:hidden;
   width:100%;
   max-width:100%;
   scrollbar-width:none;
+  position:relative;
+  z-index:2;
 }
 .pipeline-stage-strip-wrap::-webkit-scrollbar{display:none}
 .pipeline-stage-strip{
@@ -736,8 +740,8 @@ input:focus,select:focus,textarea:focus{
   grid-template-columns:minmax(0,1fr) auto;
   gap:12px;
   align-items:flex-start;
-  padding:14px 16px;
-  border-radius:18px;
+  padding:14px 16px calc(14px + var(--pipeline-connector-overlap));
+  border-radius:18px 18px 0 0;
   background:rgba(15,31,23,.96);
   border:1px solid var(--border);
   box-shadow:var(--shadow);
@@ -809,7 +813,10 @@ input:focus,select:focus,textarea:focus{
   width:var(--pipeline-column-width);
   background:rgba(15,31,23,.85);
   border:1px solid var(--border);
+  border-top:none;
   border-radius:var(--radius);
+  border-top-left-radius:0;
+  border-top-right-radius:0;
   min-height:520px;
   height:100%;
   display:flex;
@@ -894,7 +901,10 @@ input:focus,select:focus,textarea:focus{
   width:100%;
   max-width:100%;
   min-width:0;
+  margin-top:calc(var(--pipeline-connector-overlap) * -1);
   padding-bottom:0;
+  position:relative;
+  z-index:1;
 }
 
 #pipelineScrollTop{
