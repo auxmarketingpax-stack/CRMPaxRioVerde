@@ -672,14 +672,14 @@
       return getCanonicalMappedValue(requestedOwner, state.ownerCanonicalMap, "owner");
     }
     if (existingLead) {
-      return normalizeSpacing(existingLead.owner);
+      return existingLead.owner_raw ?? existingLead.owner ?? null;
     }
     return getCurrentLeadOwnerName();
   }
 
   function resolveLeadAssigneeForPersistence(existingLead = null) {
     if (existingLead) {
-      return existingLead.assigned_to || null;
+      return existingLead.assigned_to ?? null;
     }
     return state.currentUser?.id || null;
   }
@@ -1309,6 +1309,7 @@
     const socialSourceMap = options.socialSourceMap || state.socialSourceCanonicalMap;
     return {
       ...lead,
+      owner_raw: lead?.owner ?? null,
       owner: getCanonicalMappedValue(lead?.owner || "", ownerMap, "owner"),
       social_source: getCanonicalMappedValue(lead?.social_source || "", socialSourceMap, "social_source"),
       value: computedValue || Number(lead?.value || 0) || 0,
